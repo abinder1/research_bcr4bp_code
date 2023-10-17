@@ -1,0 +1,4 @@
+In chunk 5 and 8, BLTs have been found.  They both require a 100 m/s ROI burn in the +v direction:
+
+BLT 1:  Chunk 5, q = 17620 (chunk idx 285), perix #2 occurs ~157 days before ROI at an alt of 323 km
+BLT 2:  Chunk 7, q = 25307 (chunk idx 174), perix #1 occurs ~152 days before ROI at an alt of 159 km
