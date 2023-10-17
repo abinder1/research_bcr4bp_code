@@ -6,11 +6,6 @@ clear; clc; close('all');
 addpath(genpath('utilities'));  % Add folder and subfolders
 addpath(genpath('saved data'));  % Add folder and subfolders
 
-%% Constants of the Problem
-
-% This matches GMAT constants and my CR3BP/ER3BP code
-mu = 398600.4415 + 4902.8005821478;
-
 %% Permit usage of NASA NAIF's MICE Toolkit
 addpath(fullfile(pwd, './mice/src/mice/'))
 addpath(fullfile(pwd, './mice/lib/'))
@@ -32,7 +27,6 @@ cspice_furnsh( rotframe_datafile )  % Gives millisecond timing data
 %% Constants of the Problem
 mu_moon = 4902.8005821478;  % Both in km^3 / s^2
 mu_earth = 398600.4415;
-e = 0.0549006;  % Average eccentricity of the Moon's orbit
 
 l_star = 384400;  % Also equal to the average SMA of the Moon
 t_star = sqrt(l_star^3 / (mu_moon+mu_earth)); % Divide by 86400 to get time in days
