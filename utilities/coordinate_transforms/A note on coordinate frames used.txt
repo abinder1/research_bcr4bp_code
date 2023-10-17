@@ -1,0 +1,23 @@
+There are three frames typically used in the CR3BP:
+    - B_i is inertially fixed @ the barycenter
+    - E_i is an ECI frame - colinear to B_i and centered @ Earth
+    - R_i is coincident to B_i and rotates at a const. rate 'n'
+
+Vectors written in coordinates...
+    - B_i are called 'alpha'-vectors
+    - R_i are called 'a'-vectors
+    - E_i are called 'A'-vectors
+
+Relationships between 'a' and 'A' are derived in my Squid notes
+and are implemented in the functions contained within this folder
+
+Process for using these functions:
+    - Rotating coordinates to dim. ECI
+        1) Dimensionalize rotating coordinate vectors
+        2) Mean motion is = 1/t_star
+        3) Dimensionalize time
+        4) Feed these into 'Ri_to_Ei.m' to get dimensional ECI coords
+    - dim. ECI coordinates to rotating
+        1) Feed dimensional state and time into 'Ei_to_Ri.m'
+            - Mean motion is = 1/t_star
+        2) Nondimensionalize state and time vectors
