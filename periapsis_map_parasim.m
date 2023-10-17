@@ -69,7 +69,7 @@ sim_res(4000).perix = [];
 sim_res(4000).periy = [];
 
 % Where do we want to store simulation results?
-data_folder = compose('R21S_BLT_perturbations/chunks/%d/', dv);
+data_folder = compose('saved data/generated/periapsis_maps/result_chunks/%d/', dv);
 
 k = 1;  % Index for starting Sun angle
 
