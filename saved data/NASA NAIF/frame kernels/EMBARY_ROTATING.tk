@@ -1,0 +1,31 @@
+KPL/PCK
+	\begindata
+ 
+    FRAME_EM_BARYCENTRIC_ROT     =  1415926
+    FRAME_1415926_NAME           = 'EM_BARYCENTRIC_ROT'
+    FRAME_1415926_CLASS          =  5
+    FRAME_1415926_CLASS_ID       =  1415926
+    FRAME_1415926_CENTER         =  3
+    FRAME_1415926_RELATIVE       = 'J2000'
+    FRAME_1415926_DEF_STYLE      = 'PARAMETERIZED'
+    FRAME_1415926_FAMILY         = 'TWO-VECTOR'
+    FRAME_1415926_PRI_AXIS       = 'X'
+    FRAME_1415926_PRI_VECTOR_DEF = 'OBSERVER_TARGET_POSITION'
+    FRAME_1415926_PRI_OBSERVER   = 'EARTH'
+    FRAME_1415926_PRI_TARGET     = 'MOON'
+    FRAME_1415926_PRI_ABCORR     = 'NONE'
+    FRAME_1415926_SEC_AXIS       = 'Y'
+    FRAME_1415926_SEC_VECTOR_DEF = 'OBSERVER_TARGET_VELOCITY'
+    FRAME_1415926_SEC_OBSERVER   = 'EARTH'
+    FRAME_1415926_SEC_TARGET     = 'MOON'
+    FRAME_1415926_SEC_ABCORR     = 'NONE'
+    FRAME_1415926_SEC_FRAME      = 'J2000'
+
+    \begintext
+
+	This frame represents a rotating frame that follows the orbital
+	motion of the Moon with respect to the Earth.  Centered at their
+	barycenter, the frame will have an x-direction that points from
+	the barycenter to the Moon, have a z-direction in the direction
+	of the Moon's angular velocity, and a y-direction that completes
+	the triad.
