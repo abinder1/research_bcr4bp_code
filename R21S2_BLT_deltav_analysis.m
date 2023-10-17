@@ -47,7 +47,11 @@ load('saved data\generated\periapsis_maps\selected_BLT_states\R21S2_BLT_2.mat')
 epoch_burn = cspice_str2et('April 08, 2024 03:00 PM EDT');
 
 % Figure out the date we leave LEO - ~100 days prior to epoch
-epoch_depart = epoch_burn + blt_prop_time * 86400;
+epoch_depart = epoch_burn + blt_prop_time * t_star;
+
+% Get departure datetime in EDT, just like insertion
+[depart_utcstr] = cspice_et2utc( epoch_depart, 'C', 0 );
+depart_utcdt = datetime(depart_utcstr, 'InputFormat', 'yyyy MMM dd HH:mm:ss', 'TimeZone', 'UTC');
 
 % Dimensionalized synodic state at Earth close approach
 dim_depart_state = [blt_IC(1:3) * l_star; blt_IC(4:6) * v_star];
@@ -88,10 +92,12 @@ C3 = V2^2 - 2 * mu_earth / rad;
 kep_c = [SMA; ecc; inc; AOP; RAAN; f]  % Compose into a vector for easy ref
 
 % Both BLT's can be launched from Vandenberg AFB
-% BLT #1 alt:  337.9 km     |     BLT #2 alt:  98.4 km
-% BLT #1 inc:  111.2 deg    |     BLT #2 inc:  133.3 deg
-% BLT #2 Vc:  7.7040 km/s   |     BLT #2 Vc:  7.8452 km/s
-% BLT #1 dV:  3.1771 + 0.1  |     BLT #2 dV:  3.1763 + 0.1
+% BLT #1 TLI: 10:12 pm 11/02/23 EDT |     BLT #2 TLI: 8:38 pm 11/08/23 EDT
+% BLT #1 alt:  417.2 km             |     BLT #2 alt:  305.9 km
+% BLT #1 inc:  96.6 deg             |     BLT #2 inc:  129.3 deg
+% BLT #1 Vc:  7.6589 km/s           |     BLT #2 Vc:  7.7224 km/s
+% BLT #1 dV:  3.2231 + 0.1 km/s     |     BLT #2 dV:  3.2995 + 0.1 km/s
+% BLT #1 C3:  1.1004                |     BLT #2 C3:  2.2115
 
 %% "J2000" Definition:
 % This ECI frame is centered at the Earth and has the Earth's velocity.
