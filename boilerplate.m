@@ -28,12 +28,17 @@ addpath(fullfile(pwd, './mice/lib/'))
 %% Constants of the Problem
 mu_moon = 4902.8005821478;  % Both in km^3 / s^2
 mu_earth = 398600.4415;
+mu_sun = 132712440018;
 
 l_star = 384400;  % Also equal to the SMA of the Moon
 t_star = sqrt(l_star^3 / (mu_moon+mu_earth)); % Divide by 86400 to get time in days
-v_star = l_star / t_star;  % In km/s
+v_star = l_star / t_star;
+
+a_s = 149.598 * 10^6 / l_star;  % E-M Barycenter's SMA about the Sun, [nd]
 
 mu = mu_moon / (mu_earth + mu_moon);  % mu value for the Earth-Moon system
+m_s = mu_sun / (mu_earth + mu_moon);  % Nondimensionalized solar mass
+
 mu_oom = round(log10(mu)); mu_SF_known = 8;  % We know 8 Earth sigfigs, 9 Moon sigfigs
 
 % mu rounded to appropriate significance
@@ -61,51 +66,16 @@ int_results = struct('x_0k', {}, 'epoch', {}, 'int_time', {}, 'x_fk', {}, 'stm_f
 
 %% Propogate an initial condition
 % For this initial condition
-sv_k = [0.9043, 0, 0.0411, 0, -0.7721, 0, reshape(eye(6), [1,36])]';
+sv_k = [0.9043, 0, 0.0411, 0, -0.7721, 0]';
 
-% Establish epoch for this simulation epoch = M [nd] \in [0, 2pi]
-ep = 0;
-ode_func = @(t,y) state_vec_derivs(t,y,mu_nd=mu,ecc=e,epoch=ep);
+% Change the epoch by redefining the function handle
+ode_func = @(t,y)state_vec_derivs(t, y, mu_nd = mu, ...
+                                        th_S0 = 0, ...
+                                        m_s = m_s, ...
+                                        a_s = a_s      );
 
-% Propogate a path from \tau = epoch -> \tau = epoch + sim_dur
-sim_dur = 4 * pi;
-sol = ode45(ode_func, [0, sim_dur], sv_k, opts);
-
-%% Create vector of cmap indices with elements based on Moon dist
-% Preallocate an empty list for (\xi + 1) values over trajectory
-xip1_v = zeros(size(sol.x));
-
-% Assign (\xi + 1) values
-for g = 1:1:length(sol.x)
-    [~, xip1_v(g), ~, ~] = oscil_params(sol.x(g), [], [], e, ep);
-end
-
-% Normalize (\xi + 1) values to be in a range [0, 1]
-xip1_normal = (xip1_v - 1 + e) / (2*e);
-
-% Get appropriate color's index based on normalized value
-color_index = round(xip1_normal * (length(cmap_lunar) - 1) + 1);
-
-%% Plot a trajectory colored by the Moon's radial dist from Earth
-% Create scatter plot to visualize orbit
-figure; grid on; hold on; axis equal
-
-% Plot the Moon's perigee first, then apogee
-scatter3((1 - e)*(1 - mu), 0, 0, [], "Marker", "s", ...
-    "MarkerEdgeColor", 'Black', 'MarkerFaceColor', [1, 0, 0]);
-scatter3((1 + e)*(1 - mu), 0, 0, [], "Marker", "s", ...
-    "MarkerEdgeColor", 'Black', 'MarkerFaceColor', [0, 0, 1]);
-
-% Plot the extents of the Earth's movement in the frame
-scatter3((1-e) * (-mu), 0, 0, [], "Marker", ">", ...
-    "MarkerEdgeColor", 'Black', 'MarkerFaceColor', [1, 0, 0]);
-scatter3((1+e) * (-mu), 0, 0, [], "Marker", "<", ...
-    "MarkerEdgeColor", 'Black', 'MarkerFaceColor', [0, 0, 1]);
-
-% Plot the satellite's movement colored by the Moon's distance
-p=scatter3( sol.y(1,:), sol.y(2,:), sol.y(3,:), ...
-            3 * ones(size(sol.x)), ...  % Marker size
-            cmap_lunar(color_index, :), 'filled'); % Face color
+% And integrate the 'RPO'
+sol_struct = ode89(ode_func, [0, 3.5 * pi], sv_k, opts);
 
 %% Code to normalize figures
 f = figure(1);
