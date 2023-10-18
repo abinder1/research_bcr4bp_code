@@ -6,7 +6,7 @@ function xb_dot = x_bar_dot(t, xb, mu, m_s, a_s, th_S0)
     x = xb(1); y = xb(2); z = xb(3);
 
     % The sun angle in the synodic frame is analytically calculable
-    th_s = th_S0 + t * ( 1 - sqrt( (m_s + 1)/a_s^3 ) );
+    th_s = th_S0 + t * ( sqrt( (m_s + 1)/a_s^3 ) - 1 );
     cth = cos(th_s);  sth = sin(th_s);
 
     d = sqrt((x+mu)^2 + y^2 + z^2);  % Distance to Earth, [nd]
