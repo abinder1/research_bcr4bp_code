@@ -74,6 +74,13 @@ data_folder = compose('saved data/generated/periapsis_maps/result_chunks/%d/', d
 k = 1;  % Index for starting Sun angle
 
 for th_S0 = linspace(0, 2*pi, N_sun_discr)
+    
+    % Change the epoch by redefining the function handle
+    ode_func = @(t,y)state_vec_derivs(t, y, mu_nd = mu, ...
+                                            th_S0 = th_S0, ...
+                                            m_s = m_s, ...
+                                            a_s = a_s      );
+
     for chunk_num = 1:8  % = 32000 / 4000 = 8 chunks of sims
         chunk.idx_range = [4000*(chunk_num-1) + 1, 4000*chunk_num];
         chunk.th_S0 = th_S0;
@@ -86,9 +93,9 @@ for th_S0 = linspace(0, 2*pi, N_sun_discr)
         % Prevents us from saving periapses too far from Earth.
         thr = chunk.threshold;
 
-        parfor q = 1:4000  % Parallelization for one chunk
+        parfor q = 1:10  % Parallelization for one chunk
             % -84 nondimensional time units is about 1 year into the past
-            sol_struct = ode89(@(t,y) x_bar_dot(t, y, mu, m_s, a_s, th_S0), [0, -84], chunk_ICs(:, q), opts_peri);
+            sol_struct = ode89(ode_func, [0, -84], chunk_ICs(:, q), opts_peri);
         
             % Keep finding periapses until one year has passed
             while sol_struct.x(end) > -84

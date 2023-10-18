@@ -54,28 +54,42 @@ zlabel("z-distance from barycenter [n.d.]")
 load("bcr4bp\saved data\generated\periapsis_maps\selected_BLT_states\R21S2_BLT_1.mat")
 
 % Properly choose 'epoch' Sun angle (RPO insertion @ t = 0)
-th_S0 = blt_prop_time * (sqrt((m_s + 1)/a_s^3) - 1);
+th_S0_TOI = blt_prop_time * (sqrt((m_s + 1)/a_s^3) - 1);
 
-% Integrate from the Earth until RPO insertion
-sol_struct = ode89(@(t,y) x_bar_dot(t, y, mu, m_s, a_s, th_S0), [0, -blt_prop_time], blt_IC, opts);
+% Prepare the MATLAB ODE suite with this calculated epoch
+ode_func = @(t,y)state_vec_derivs(t, y, mu_nd = mu, ...
+                                        th_S0 = th_S0_TOI, ...
+                                        m_s = m_s, ...
+                                        a_s = a_s           );
+
+% Propogate these IC's from \tau = epoch -> \tau = epoch + sim_dur
+sol_struct = ode89(ode_func, [0, -blt_prop_time], blt_IC, opts);
 
 % Plot this full simulation to visualize 'settling' period
-settle = plot3(sol_struct.y(1, :), sol_struct.y(2, :), sol_struct.y(3, :), 'b')
+settle = plot3(sol_struct.y(1, :), sol_struct.y(2, :), sol_struct.y(3, :), 'b');
 
 % T = 15.8 for BLT1, 8.5 for BLT2
 % Also produce a truncated sim from the Earth until lunar flyby
-sol_struct = ode89(@(t,y) x_bar_dot(t, y, mu, m_s, a_s, th_S0), [0, 8.5], blt_IC, opts);
+sol_struct = ode89(ode_func, [0, 15.8], blt_IC, opts);
 
 % Plot traj. until lunar flyby + lunar close approach pt.
-blt = plot3(sol_struct.y(1, :), sol_struct.y(2, :), sol_struct.y(3, :), 'g')
-flyby = scatter3(sol_struct.y(1, end), sol_struct.y(2, end), sol_struct.y(3, end), 'filled', 'g')
+blt = plot3(sol_struct.y(1, :), sol_struct.y(2, :), sol_struct.y(3, :), 'g');
+flyby = scatter3(sol_struct.y(1, end), sol_struct.y(2, end), sol_struct.y(3, end), 'filled', 'g');
 
 % Also mark the RPO injection point
-inject = scatter3(blt_FC(1), blt_FC(2), blt_FC(3), 'filled', 'ks')
+inject = scatter3(blt_FC(1), blt_FC(2), blt_FC(3), 'filled', 'ks');
 
 % Simulate the 'RPO' (unconverged in BCR4BP) for vis. purposes
-blt_FC(4:6) = (1 - 0.1 / norm(blt_FC(4:6) / v_star)) * blt_FC(4:6)
-sol_struct = ode89(@(t,y) x_bar_dot(t, y, mu, m_s, a_s, 0), [0, 4 * pi], blt_FC, opts);
+blt_FC(4:6) = (1 - 0.1 / norm(blt_FC(4:6) / v_star)) * blt_FC(4:6);
+                
+% Change the epoch by redefining the function handle
+ode_func = @(t,y)state_vec_derivs(t, y, mu_nd = mu, ...
+                                        th_S0 = 0, ...
+                                        m_s = m_s, ...
+                                        a_s = a_s      );
+
+% And integrate the 'RPO'
+sol_struct = ode89(ode_func, [0, 3.5 * pi], blt_FC, opts);
 
 % Plot the 'RPO'
-orbit = plot3(sol_struct.y(1, :), sol_struct.y(2, :), sol_struct.y(3, :), 'r')
+orbit = plot3(sol_struct.y(1, :), sol_struct.y(2, :), sol_struct.y(3, :), 'r');
