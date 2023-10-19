@@ -74,6 +74,22 @@ ode_func = @(t,y)state_vec_derivs(t, y, mu_nd = mu, ...
 % Propogate these IC's from \tau = epoch -> \tau = epoch + sim_dur
 sol_struct = ode89(ode_func, [0, -blt_prop_time], blt_IC, opts);
 
+JC_vec = zeros([1, length(sol_struct.x)]);
+HEM_vec = zeros([1, length(sol_struct.x)]);
+
+for k = 1:1:length(sol_struct.x)
+    JC_vec(k) = JacobiConstant(sol_struct.y(:, k), mu);
+    HEM_vec(k) = Hamiltonian_EM(sol_struct.y(:, k), sol_struct.x(k), mu, m_s, a_s, th_S0_TOI);
+end
+
+figure(2); hold on; grid on; plot(sol_struct.x, HEM_vec)
+xlabel('Time [nd]');  ylabel('Hamiltonian, Earth-Moon [nd]')
+
+figure(3); hold on; grid on; plot(sol_struct.x, JC_vec)
+xlabel('Time [nd]');  ylabel('Jacobi Constant [nd]')
+
+figure(orbitviews.shalos);
+
 % Plot this full simulation to visualize 'settling' period
 settle = plot3(sol_struct.y(1, :), sol_struct.y(2, :), sol_struct.y(3, :), 'b');
 
@@ -87,6 +103,11 @@ flyby = scatter3(sol_struct_flyby.y(1, end), sol_struct_flyby.y(2, end), sol_str
 
 % Also mark the RPO injection point
 inject = scatter3(blt_FC(1), blt_FC(2), blt_FC(3), 'filled', 'ks');
+
+figure(2); scatter(sol_struct_flyby.x(end), Hamiltonian_EM(sol_struct_flyby.y(:, end), sol_struct_flyby.x(end), mu, m_s, a_s, th_S0_TOI))
+figure(3); scatter(sol_struct_flyby.x(end), JacobiConstant(sol_struct_flyby.y(:, end), mu))
+
+figure(orbitviews.shalos);
 
 % Simulate the 'RPO' (unconverged in BCR4BP) for vis. purposes
 blt_FC(4:6) = (1 - 0.1 / norm(blt_FC(4:6) / v_star)) * blt_FC(4:6);
