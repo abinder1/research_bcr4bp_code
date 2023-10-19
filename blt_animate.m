@@ -116,7 +116,8 @@ zlabel("z-distance from Earth [km]")
 orbitviews.inertial.Position = [140, 120, 2^9, 2^9]
 
 % Define custom figure view for optimal viewing
-view([-175, 25]);
+% view([-125, 20]);  % Good for BLT 1
+view([-175, 25]);  % Good for BLT 2
 
 orbitviews.inertial.Children.Position = [0.1, 0, 0.85, 1]
 orbitviews.inertial.Children.Color = 'none'
@@ -175,11 +176,16 @@ tail_length = 20;  % How many frames do you want the tail to persist
 long_tail_length = num_frames;
 
 F(num_frames) = struct('cdata',[],'colormap',[]);
-v = VideoWriter('animations/unstable_manif.mp4', 'MPEG-4'); v.FrameRate = mv_fps;
+v = VideoWriter('animations/BLT_2_anim_blacktail.mp4', 'MPEG-4'); v.FrameRate = mv_fps;
 
 open(v); max_oop = max(dim_state_inert(3, :))
 
-xlim([-5, 5] * 10^5); ylim([-9, 5] * 10^5); zlim([-2.3, 1.2] * 10^5);
+bound_UL = max(max(dim_state_inert(1:3, :), [], 2), [5; 5; 0]*10^5);
+bound_LL = min(min(dim_state_inert(1:3, :), [], 2), [-5; -5; 0]*10^5);
+
+xlim([bound_LL(1), bound_UL(1)]);
+ylim([bound_LL(2), bound_UL(2)]);
+zlim([bound_LL(3), bound_UL(3)]);
 
 % Good views:  [-95, 17] for BLT, [-122, -8] for settling
 
@@ -214,7 +220,7 @@ for k = 1:1:length(anim_tvec)
         mt_plot = plot3(moon_tail(1,:), moon_tail(2,:), moon_tail(3,:), '--');
 
         satellite = scatter3(this_pt(1), this_pt(2), this_pt(3), 'ks');
-        slt_plot = plot3(this_pt_ltail(1,:), this_pt_ltail(2,:), this_pt_ltail(3,:), 'Color', [0.8, 0.8, 0.8]);
+        slt_plot = plot3(this_pt_ltail(1,:), this_pt_ltail(2,:), this_pt_ltail(3,:), 'k');
         st_plot = plot3(this_pt_tail(1,:), this_pt_tail(2,:), this_pt_tail(3,:), 'r');
 
         sundir = quiver3(sunvec_basepoint(1), sunvec_basepoint(2), sunvec_basepoint(3), ...
