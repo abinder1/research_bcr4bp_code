@@ -53,9 +53,8 @@ zlabel("z-distance from barycenter [n.d.]")
 
 %% ODE45 function testing
 
-dv = 37;  % Choose delta-v dataset we're interested in and load
-input_data = compose('saved data/generated/periapsis_maps/ICs/pert_states_%d.mat', dv);
-load(input_data{1});  % Loading in 'pert_states' structure
+% Loading in 'pert_states' structure
+load('saved data\generated\periapsis_maps\ICs\short_period\SPO1_pert_states_100.mat');
 
 % Compose +dV and -dV into a single vector 
 IC_set = [pert_states.state_neg pert_states.state_pos];
@@ -68,8 +67,8 @@ sim_res(4000).q = [];
 sim_res(4000).perix = [];
 sim_res(4000).periy = [];
 
-% Where do we want to store simulation results?
-data_folder = compose('saved data/generated/periapsis_maps/result_chunks/%d/', dv);
+% Where do we want to store simulation results?  By SPO
+data_folder = 'saved data/generated/periapsis_maps/result_chunks/SPO/1_100/';
 
 k = 1;  % Index for starting Sun angle
 
@@ -129,7 +128,7 @@ for th_S0 = linspace(0, 2*pi, N_sun_discr)
 
         % Save remaining chunk sims to file, indexed by Sun angle index and chunk #
         filename = compose('%d_%d_%d.mat', k, N_sun_discr, chunk_num);
-        filename = fullfile(data_folder{1}, filename{1});
+        filename = fullfile(data_folder, filename{1});
 
         save(filename, 'chunk')
     end
