@@ -4,7 +4,7 @@ clear; clc; close('all')
 
 for k = 1:1:8 % For each chunk corresponding to a Sun angle epoch
     % Load that datasetcompose('saved data/generated/periapsis_maps/result_chunks/%d/', dv)
-    filename = compose('saved data/generated/periapsis_maps/result_chunks/100/1_100_%d.mat', k);
+    filename = compose('saved data/generated/periapsis_maps/result_chunks/SPO/2_100/1_100_%d.mat', k);
     load(filename{1})
 
     for q = 1:1:length(chunk.sim_res) % For each simulation
