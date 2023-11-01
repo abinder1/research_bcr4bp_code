@@ -34,7 +34,7 @@ mu = round(mu*10^(mu_SF_known-mu_oom-1)) / 10^(mu_SF_known-mu_oom-1);
 opts = odeset("RelTol",3e-14,"AbsTol",3e-14,"MaxStep",0.03);
 
 peri_func = @(t,y) periapsis_pure(t, y, mu, 1, true);
-opts_peri = odeset("RelTol",3e-14,"AbsTol",3e-14,"MaxStep",0.03,"Events",peri_func);
+opts_peri = odeset("RelTol",8e-13,"AbsTol",8e-13,"Events",peri_func);
 
 %% Initialize a trajectory figure
 % Orbital figure initialize - lib. points and E/M
@@ -54,7 +54,7 @@ zlabel("z-distance from barycenter [n.d.]")
 %% ODE45 function testing
 
 % Loading in 'pert_states' structure
-load('saved data\generated\periapsis_maps\ICs\short_period\SPO1_pert_states_100.mat');
+load('saved data\generated\periapsis_maps\ICs\short_period\SPO3_pert_states_100.mat');
 
 % Compose +dV and -dV into a single vector 
 IC_set = [pert_states.state_neg pert_states.state_pos];
@@ -68,7 +68,7 @@ sim_res(4000).perix = [];
 sim_res(4000).periy = [];
 
 % Where do we want to store simulation results?  By SPO
-data_folder = 'saved data/generated/periapsis_maps/result_chunks/SPO/1_100/';
+data_folder = 'saved data/generated/periapsis_maps/result_chunks/SPO/3_100/';
 
 k = 1;  % Index for starting Sun angle
 
@@ -92,24 +92,26 @@ for th_S0 = linspace(0, 2*pi, N_sun_discr)
         % Prevents us from saving periapses too far from Earth.
         thr = chunk.threshold;
 
-        parfor q = 1:10  % Parallelization for one chunk
+        parfor q = 1:4000  % Parallelization for one chunk
             % -84 nondimensional time units is about 1 year into the past
             sol_struct = ode89(ode_func, [0, -84], chunk_ICs(:, q), opts_peri);
         
             % Keep finding periapses until one year has passed
-            while sol_struct.x(end) > -84
+            while and(sol_struct.x(end) > -84, max(sol_struct.ie) < 2)
                 sol_struct = odextend(sol_struct, [], -84);
             end
     
             % After the above loop, all periapses are in sol_struct.ye
             % Which of this sim's periapses are below our chosen threshold?
             low_peris = vecnorm(sol_struct.ye(1:3, :) + [mu; 0; 0], 2) <= thr;
+
+            low_peris = low_peris(sol_struct.ie == 1);
     
             % Save this sim's results to structs 'xe' and 'ye',
             % but only save results below our threshold
             sim_res(q).q = q + 4000*(chunk_num-1);
-            sim_res(q).perix = sol_struct.xe(low_peris)
-            sim_res(q).periy = sol_struct.ye(:, low_peris)
+            sim_res(q).perix = sol_struct.xe(low_peris);
+            sim_res(q).periy = sol_struct.ye(:, low_peris);
         end
 
         has_peris = false([1, 4000]);
