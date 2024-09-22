@@ -23,8 +23,8 @@
 %% MATLAB Initialization and MATLAB Constants Definition
 clear; clc; close('all');
 
-addpath(genpath('utilities'));  % Add folder and subfolders
-addpath(genpath('saved data'));  % Add folder and subfolders
+addpath(genpath('..\utilities'));  % Add folder and subfolders
+addpath(genpath('..\saved data'));  % Add folder and subfolders
 
 
 %% Constants of the Problem
