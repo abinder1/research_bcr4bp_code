@@ -505,11 +505,12 @@
 	
 	is a quantity that directly correlates with the strength of the Sun's gravity.  When $\sigma = 0$, the Sun doesn't exert any gravity and the model above simplifies to be the CR3BP.  Furthermore if $i = 0$, the model simplifies down to a more traditional BCR4BP model.
 	
-	\subsection{Continuations}
+	\section{Partial Derivatives for Continuations}
 	
 	There are a number of system quantities for which we'd like to do continuations over:
 	
 	\begin{enumerate}
+		\item $\mathbf{x}_{\mathcal{M}\text{, EM}}$ - for the traditional state transition matrix
 		\item $\sigma$ - varying the strength of the Sun's gravity
 		\item $M_0$ - varying the initial phasing of the Moon in it's orbit
 		\item $i$ - varying the Moon's inclination away from the ecliptic, fairly stable at $\approxeq 5.145^o$
@@ -526,7 +527,15 @@
 	
 	\hrule \vspace{1em}
 	
-	Moving on to the synodic position:
+	Moving on to the synodic velocity:
+	
+	\begin{equation*}
+		\pd{\ddot{\mathbf{x}}_{\mathcal{M}\text{, EM}}}{\dot{\mathbf{x}}_{\mathcal{M}\text{, EM}}} = \pd{\mathbf{k}}{\dot{\mathbf{x}}_{\mathcal{M}\text{, EM}}} = 2 \dot{M} K_4 = 2 K_4
+	\end{equation*} 
+	
+	\hrule \vspace{1em}
+	
+	And now the synodic position:
 	
 	\begin{equation*}
 		\pd{\boldsymbol{\Delta}_E}{\mathbf{x}_{\mathcal{M}\text{, EM}}} = \mathbf{I}_{3\times 3}
@@ -581,15 +590,15 @@
 	\hrule \vspace{1em}
 	
 	\begin{equation*}
-		\pd{\boldsymbol{\Delta}_S}{\mathbf{x}_{\mathcal{M}\text{, EM}}} = C_B
+		\pd{\boldsymbol{\Delta}_S}{\mathbf{x}_{\mathcal{M}\text{, EM}}} = C_B^T
 	\end{equation*}
 	
 	\begin{equation*}
-		\pddown{\boldsymbol{\Delta}_S \cdot \boldsymbol{\Delta}_S}{\mathbf{x}_{\mathcal{M}\text{, EM}}} = \pd{\boldsymbol{\Delta}_S}{\mathbf{x}_{\mathcal{M}\text{, EM}}} \cdot \boldsymbol{\Delta}_S + \boldsymbol{\Delta}_S \cdot \pd{\boldsymbol{\Delta}_S}{\mathbf{x}_{\mathcal{M}\text{, EM}}} = 2 \boldsymbol{\Delta}_S^T C_B
+		\pddown{\boldsymbol{\Delta}_S \cdot \boldsymbol{\Delta}_S}{\mathbf{x}_{\mathcal{M}\text{, EM}}} = \pd{\boldsymbol{\Delta}_S}{\mathbf{x}_{\mathcal{M}\text{, EM}}} \cdot \boldsymbol{\Delta}_S + \boldsymbol{\Delta}_S \cdot \pd{\boldsymbol{\Delta}_S}{\mathbf{x}_{\mathcal{M}\text{, EM}}} = 2 \boldsymbol{\Delta}_S^T C_B^T
 	\end{equation*}
 	
 	\begin{equation*}
-		\pddown{ [\boldsymbol{\Delta}_S \cdot \boldsymbol{\Delta}_S]^{-3/2} }{\mathbf{x}_{\mathcal{M}\text{, EM}}} = -3 \boldsymbol{\Delta}_S^T C_B [\boldsymbol{\Delta}_S \cdot \boldsymbol{\Delta}_S]^{-5/2}
+		\pddown{ [\boldsymbol{\Delta}_S \cdot \boldsymbol{\Delta}_S]^{-3/2} }{\mathbf{x}_{\mathcal{M}\text{, EM}}} = -3 \boldsymbol{\Delta}_S^T C_B^T [\boldsymbol{\Delta}_S \cdot \boldsymbol{\Delta}_S]^{-5/2}
 	\end{equation*}
 	
 	\begin{align}
@@ -599,7 +608,7 @@
 		%
 		&= -\mu_\odot \left[ \pd{ \boldsymbol{\Delta}_S}{ \mathbf{x}_{\mathcal{M}\text{, EM}} }[\boldsymbol{\Delta}_S\cdot\boldsymbol{\Delta}_S]^{-3/2} + \boldsymbol{\Delta}_S \pd{ [\boldsymbol{\Delta}_S\cdot\boldsymbol{\Delta}_S]^{-3/2} }{ \mathbf{x}_{\mathcal{M}\text{, EM}} } \right] \\
 		%
-		&= -\mu_\odot \left[ (\boldsymbol{\Delta}_S\cdot\boldsymbol{\Delta}_S) \mathbf{I}_{3\times 3} - 3 \boldsymbol{\Delta}_S \boldsymbol{\Delta}_S^T \right] C_B [\boldsymbol{\Delta}_S \cdot \boldsymbol{\Delta}_S]^{-5/2} \\
+		&= -\mu_\odot \left[ (\boldsymbol{\Delta}_S\cdot\boldsymbol{\Delta}_S) \mathbf{I}_{3\times 3} - 3 \boldsymbol{\Delta}_S \boldsymbol{\Delta}_S^T \right] C_B^T [\boldsymbol{\Delta}_S \cdot \boldsymbol{\Delta}_S]^{-5/2} \\
 		%
 	\end{split}
 	\end{align}
@@ -607,7 +616,7 @@
 	\hrule \vspace{1em}
 	
 	\begin{equation*}
-		\pd{\mathbf{k}}{ \mathbf{x}_{\mathcal{M}\text{, EM}} } = -K_3
+		\pd{\mathbf{k}}{ \mathbf{x}_{\mathcal{M}\text{, EM}} } = - \dot{M}^2 K_3 = -K_3
 	\end{equation*}
 	
 	\hrule \vspace{1em}
@@ -625,15 +634,15 @@
 		%
 		&= \sigma C_B \pd{ \mathbf{a}_{\odot} }{ \mathbf{x}_{\mathcal{M}\text{, EM}} } + \pd{ \mathbf{a}_\oplus }{ \mathbf{x}_{\mathcal{M}\text{, EM}} } + \pd{ \mathbf{a}_\text{Moon} }{ \mathbf{x}_{\mathcal{M}\text{, EM}} } + \pd{ \mathbf{k} }{ \mathbf{x}_{\mathcal{M}\text{, EM}} } \\
 		%
-		&= \sigma \mu_\odot C_B \left[ 3 \boldsymbol{\Delta}_S \boldsymbol{\Delta}_S^T - (\boldsymbol{\Delta}_S\cdot\boldsymbol{\Delta}_S) \mathbf{I}_{3\times 3} \right] C_B [\boldsymbol{\Delta}_S \cdot \boldsymbol{\Delta}_S]^{-5/2} \\
+		&= \sigma \mu_\odot C_B \left[ 3 \boldsymbol{\Delta}_S \boldsymbol{\Delta}_S^T - (\boldsymbol{\Delta}_S\cdot\boldsymbol{\Delta}_S) \mathbf{I}_{3\times 3} \right] C_B^T [\boldsymbol{\Delta}_S \cdot \boldsymbol{\Delta}_S]^{-5/2} \\
 		&+ (1-\mu) \left[ 3 \boldsymbol{\Delta}_E \boldsymbol{\Delta}_E^T - (\boldsymbol{\Delta}_E\cdot\boldsymbol{\Delta}_E) \mathbf{I}_{3\times 3} \right] [\boldsymbol{\Delta}_E \cdot \boldsymbol{\Delta}_E ]^{-5/2} \\
 		&+ \mu \left[ 3 \boldsymbol{\Delta}_M \boldsymbol{\Delta}_M^T - (\boldsymbol{\Delta}_M\cdot\boldsymbol{\Delta}_M) \mathbf{I}_{3\times 3} \right] [\boldsymbol{\Delta}_M \cdot \boldsymbol{\Delta}_M ]^{-5/2} - K_3 \\
 	\end{split}
 	\end{align}
 	
-	Should one of those $C_B$'s be a $C_B^T$?
-	
 	\hrule \vspace{1em}
+	
+	We can now work on each of the angles for which we might want to perform a homotopy.  First with the Moon's initial argument of latitude in it's orbit:
 	
 	\begin{equation*}
 		\pd{C_B}{M_0} = K_1(M) C_1(i) C_3(B)
@@ -668,6 +677,8 @@
 	Missing is the final composed expression
 	
 	\hrule \vspace{1em}
+	
+	Next is the Moon's RAAN with respect to the ecliptic frame:
 	
 	\begin{equation*}
 		\pd{C_B}{\Omega} = C_3(M) C_1(i) K_1(B)
@@ -705,6 +716,8 @@
 	
 	\hrule \vspace{1em}
 	
+	Finally, we can work on the Moon's inclination
+	
 	\begin{equation*}
 		\pd{C_B}{i} = C_3(M) \pd{C_1(i)}{i} C_3(B)
 	\end{equation*}
@@ -735,9 +748,11 @@
 	
 	\begin{align}
 	\begin{split}
-		\pd{\mathbf{a}_{\odot\gamma}}{i}
-		&= -(1 - \sigma)^{-1} \left[ (\boldsymbol{\Delta}_S \cdot \boldsymbol{\Delta}_S)\mathbf{I}_{3\times 3} - 3 \boldsymbol{\Delta}_S \boldsymbol{\Delta}_S^T \right] [\boldsymbol{\Delta}_S \cdot \boldsymbol{\Delta}_S]^{-5/2} \left[ \pd{C_B}{i} \right]^T \mathbf{x}_{\mathcal{M}\text{, EM}} \\
-		&= \left[\pd{\mathbf{a}_{\odot\gamma}}{ \mathbf{x}_{\mathcal{M}\text{, EM}} }\right] C_B^T \left[ \pd{C_B}{i} \right]^T \mathbf{x}_{\mathcal{M}\text{, EM}}
+		\pd{\mathbf{a}_{\odot}}{i} 
+		&= -\mu_\odot \pddown{ \boldsymbol{\Delta}_S [\boldsymbol{\Delta}_S \cdot \boldsymbol{\Delta}_S]^{-3/2} }{i} \\
+		&= -\mu_\odot \left[ \pd{ \boldsymbol{\Delta}_S }{i}[\boldsymbol{\Delta}_S \cdot \boldsymbol{\Delta}_S]^{-3/2} + \boldsymbol{\Delta}_S  \pddown{ [\boldsymbol{\Delta}_S \cdot \boldsymbol{\Delta}_S]^{-3/2} }{i} \right] \\
+		&= -\mu_\odot \left[ (\boldsymbol{\Delta}_S \cdot \boldsymbol{\Delta}_S)\mathbf{I}_{3\times 3} - 3 \boldsymbol{\Delta}_S \boldsymbol{\Delta}_S^T \right] [\boldsymbol{\Delta}_S \cdot \boldsymbol{\Delta}_S]^{-5/2} \left[ \pd{C_B}{i} \right]^T \mathbf{x}_{\mathcal{M}\text{, EM}} \\
+		&= \left[\pd{\mathbf{a}_{\odot}}{ \mathbf{x}_{\mathcal{M}\text{, EM}} }\right] C_B^T \left[ \pd{C_B}{i} \right]^T \mathbf{x}_{\mathcal{M}\text{, EM}} \\
 	\end{split}
 	\end{align}
 	
