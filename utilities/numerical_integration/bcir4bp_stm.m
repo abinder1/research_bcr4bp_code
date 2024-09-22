@@ -49,7 +49,7 @@ function sv_dot = bcir4bp_stm(tau, sv, sigma, M0, inc, RAAN, mu, ae, mu_S)
 
     % Get the Moon's AoL and the RAAN - Earth MA diff. at the current tau
     M = M0 + tau;
-    B = RAAN - sqrt(mu_S/ae^3) * tau;
+    B = RAAN - sqrt((mu_S+1)/ae^3) * tau;
 
     % Construct appropriate simple-rotation direction cosine matrices...
     C3M = [cos(M), sin(M), 0; -sin(M), cos(M), 0; 0, 0, 1];
