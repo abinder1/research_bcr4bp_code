@@ -5,3 +5,8 @@
 **/.svg
 **/.png
 *.asv
+
+##### IGNORE TEXWORKS GENERATED FILES #####
+# Strange include/exclude pattern here used to only get *.tex files at bottom
+tex/*
+!*.tex

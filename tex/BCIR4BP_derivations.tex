@@ -1,0 +1,746 @@
+%%%%%%%%%%%%% Begin document %%%%%%%%%%%%%
+\documentclass[]{article}
+
+%%%%%%%%%%%%% Package imports %%%%%%%%%%%%%
+\usepackage[T1]{fontenc}
+\usepackage{titlesec}
+\usepackage[backend=biber, style=numeric]{biblatex}
+\usepackage{multicol}
+\usepackage{easyReview}
+\usepackage{matlab-prettifier}
+\usepackage[letterpaper, margin=1in]{geometry}
+\usepackage{amsmath}
+\usepackage{amssymb}
+\usepackage{bbm}
+
+%%%%%%%%%%%%% Macro definitions %%%%%%%%%%%%%
+\newcommand{\pd}[2]{\frac{\partial\;#1}{\partial\;#2}}
+\newcommand{\pddown}[2]{\frac{\partial}{\partial\;#2} \left[ #1 \right] }
+
+\newcommand{\norm}[1]{\left| \left| #1 \right| \right|_{2}}
+
+%%%%%%%%%%%%% Title card content %%%%%%%%%%%%%
+\title{Derivation of the BCIR4BP}
+\author{Andrew Binder}
+\date{09/18/2024}
+
+%%%%%%%%%%%%% Document formatting commands %%%%%%%%%%%%%
+
+% Configure the location of the Bibfile exported from Zotero
+\addbibresource{../../../../../Documents/zotero_export.bib}
+
+% Lines spaced less densely
+\linespread{1.25}
+
+% Custom section numbering, with homework number pre-appended
+\titleformat{\section}[hang]
+{\bfseries}
+{\large}{0.5em}{\large}
+
+\titleformat{\subsection}[hang]
+{\bfseries}
+{}{0.5em}{}
+
+\titleformat{\subsubsection}[hang]
+{\itshape}
+{}{0.5em}{ \underline }
+
+\titlespacing{\section}{1pc}{1.5ex plus .1ex minus .2ex}{1pc}
+\titlespacing{\subsection}{1pc}{1.5ex plus .1ex minus .2ex}{1pc}
+\titlespacing{\subsubsection}{1pc}{1.5ex plus .1ex minus .2ex}{1pc}
+
+%%%%%%%%%%%%% Begin document %%%%%%%%%%%%%
+
+\begin{document}
+	\maketitle
+	
+	\section{Dynamical Preliminaries}
+	\subsection{Assumptions}
+	\begin{enumerate}
+		\item The Sun, the Earth, and the Moon can be modelled as point masses exerting Keplerian gravity
+		\item The Sun and Earth-Moon system both orbit about their mutual barycenter in fixed circular orbits
+		\item The Earth and Moon both orbit about their mutual barycenter in fixed circular orbits
+		\item The Earth and Moon's mutual orbit is unperturbed by the third-body influence of the Sun
+		\item A fourth point mass, the satellite, is free to move about the full dynamical system and is small enough to not perturb the motion of any of the three primaries.
+	\end{enumerate}
+	
+	\subsection{Frame definitions}
+	
+	There are five frames to track in this derivation:
+	
+	\begin{enumerate}
+		\item The inertial frame $\mathcal{I}$, which is centered at the instantaneous center-of-mass of the Sun-Earth-Moon system (called $B_\text{EMS}$), has a first direction that starts pointing at the Earth-Moon barycenter (called $B_\text{EM}$), a third direction aligned to the Earth-Moon system's angular momentum vector in it's orbit about the Sun, and a second direction that completes the triad.  The angle that the position of the Earth-Moon system's barycenter makes with the first direction in this frame is the inertially defined angle $E$.
+		\item The rotating frame $\mathcal{R}_\text{EMS}$, which is centered at the instantaneous center-of-mass of the Sun-Earth-Moon system (called $B_\text{EMS}$), has a first direction that stays pointed at the Earth-Moon barycenter (called $B_\text{EM}$), a third direction aligned to the Earth-Moon system's angular momentum vector in it's orbit about the EMS barycenter, and a second direction that completes the triad.
+		\item The rotating frame $\mathcal{R}_\text{EM}$, which has directions aligned to the $\mathcal{R}_\text{EMS}$ frame, but which is instead centered at the Earth-Moon barycenter (called $B_\text{EM}$)
+		\item The rotating frame $\mathcal{I}_\text{EM}$ (the 'inertial' frame typically used in the CR3BP), which is centered at the Earth-Moon barycenter (called $B_\text{EM}$), and has directions aligned to the $\mathcal{I}$ frame's directions.
+		\item The rotating frame $\mathcal{M}_\text{EM}$ (the rotating frame typically used in the CR3BP), which is centered at the Earth-Moon barycenter (called $B_\text{EM}$), has a first direction that stays pointed at the Moon, a third direction aligned to the Moon's angular momentum vector in it's orbit about the Earth-Moon barycenter, and a second direction that completes the triad.  The transformation from $\mathcal{I}_\text{EM}$ to $\mathcal{M}_\text{EM}$ is governed by the 3-1-3 Euler angle set $\{\Omega, i, M\}$.
+	\end{enumerate}
+	
+	\subsection{Frame transformations}
+	
+	The rotation matrix that converts from $\mathcal{I}\rightarrow\mathcal{R}_\text{EMS}$ coordinates is $C_E$, or:
+	
+	\begin{equation}
+		C_E = \begin{bmatrix}
+			 \cos{(E)} & \sin{(E)} & 0 \\
+			-\sin{(E)} & \cos{(E)} & 0 \\
+		 	 0 & 0 & 1
+		\end{bmatrix}
+	\end{equation}
+	
+	In other words, for a vector in $\mathcal{I}$ coordinates $\mathbf{x}_\mathcal{I}$ that we'd like to transform into a vector $\mathbf{x}_{\mathcal{R}\text{, EMS}}$ represented in $\mathcal{R}_\text{EMS}$ coordinates:
+	
+	\begin{equation}
+		\mathbf{x}_{\mathcal{R}\text{, EMS}} = C_E \mathbf{x}_\mathcal{I}
+	\end{equation}
+	
+	The rotation matrix that converts from $\mathcal{I}_\text{EM}\rightarrow\mathcal{M}_\text{EM}$ coordinates is $C_\text{313}$, or:
+	
+	\begin{align}
+	\begin{split}
+		C_\text{313}
+		&= C_3(M) C_1(i) C_3(\Omega) \\
+		&= \begin{bmatrix}
+			\cos{(M)} & \sin{(M)} & 0 \\
+			-\sin{(M)} & \cos{(M)} & 0 \\
+			0 & 0 & 1
+		\end{bmatrix} \begin{bmatrix}
+			1 & 0 & 0 \\
+			0 & \cos{(i)} & \sin{(i)} \\
+			0 & -\sin{(i)} & \cos{(i)}
+		\end{bmatrix}\begin{bmatrix}
+			\cos{(\Omega)} & \sin{(\Omega)} & 0 \\
+			-\sin{(\Omega)} & \cos{(\Omega)} & 0 \\
+			0 & 0 & 1
+		\end{bmatrix} \\
+		&= \begin{bmatrix}
+			c_M c_\Omega - s_M c_i s_\Omega, & c_M s_\Omega + s_M c_i c_\Omega, & s_M s_i \\
+			-s_M c_\Omega - c_M c_i s_\Omega, & c_M c_i c_\Omega - s_M s_\Omega, & c_M s_i \\
+			s_i s_\Omega, & -s_i c_\Omega, & c_i
+		\end{bmatrix}
+	\end{split}
+	\end{align}
+	
+	Where $c_a$ indicates the cosine of the placeholder angle $a$, and $s_a$ indicates it's sine.
+	
+	\section{Derivation of the dimensional equations of motion}
+	
+	% \mathcal{I}, \mathcal{R}_\text{EMS}, \mathcal{R}_\text{EM}, \mathcal{I}_\text{EM}, \mathcal{M}_\text{EM}
+	% B_\text{EM}, B_\text{EMS}
+	% \mathbf{x}_\mathcal{I}, \mathbf{x}_{\mathcal{R}\text{, EMS}}, \mathbf{x}_{\mathcal{R}\text{, EM}}, \mathbf{x}_{\mathcal{I}\text{, EM}}, \mathbf{x}_{\mathcal{M}\text{, EM}}
+	% C_E, C_\text{313}
+	
+	Presume that we start with an inertial position vector $\mathbf{x}_\mathcal{I}$ in $\mathcal{I}$-frame coordinates.  This position can be expressed in the $\mathcal{R}_\text{EMS}$ frame with the application of $C_E$:
+	
+	\begin{equation}
+		\mathbf{x}_{\mathcal{R}\text{, EMS}} = C_E \mathbf{x}_\mathcal{I}
+	\end{equation}
+	
+	Within the $\mathcal{R}_\text{EMS}$ frame, the Sun and Earth-Moon barycenter are at predictable and fixed positions ($\mathbf{s}$ and $\boldsymbol{\epsilon}$, respectively).  For an arbitrary frame $\mathcal{A}$, the pointing directions within that frame are indexed like $\hat{\mathcal{A}}^i$, where $\hat{\mathcal{A}}^i$ is the i'th direction in that frame:
+	%
+	\begin{equation}
+		\mathbf{s} = -\gamma \; a_E \cdot \hat{\mathcal{R}}_\text{EMS}^1
+	\end{equation}
+	%
+	\begin{equation}
+		\boldsymbol{\epsilon} = (1-\gamma) \; a_E \cdot \hat{\mathcal{R}}_\text{EMS}^1
+	\end{equation}
+	%
+	If we want to express a vector relative to the Earth-Moon barycenter from $\mathcal{R}_\text{EMS}$ coordinates into $\mathcal{R}_\text{EM}$ coordinates, we can shift by $\boldsymbol{\epsilon}$
+	%
+	\begin{equation}
+		\mathbf{x}_{\mathcal{R}\text{, EM}} = \mathbf{x}_{\mathcal{R}\text{, EMS}} - \boldsymbol{\epsilon}
+	\end{equation}
+	
+	To rotate this relative vector back out into the inertial frame, we must use $C_E$ but now transposed
+	
+	\begin{equation}
+		\mathbf{x}_{\mathcal{I}\text{, EM}} = C_E^T \; \mathbf{x}_{\mathcal{R}\text{, EM}}
+	\end{equation}
+	
+	If we want this vector in the Earth-Moon rotating frame $\mathcal{M}_\text{EM}$, we must apply one final direction cosine matrix, $C_\text{313}$:
+	
+	\begin{equation}
+		\mathbf{x}_{\mathcal{M}\text{, EM}} = C_\text{313} \; \mathbf{x}_{\mathcal{I}\text{, EM}}
+	\end{equation}
+	%
+	To remove any ambiguity about future frame translations, it is worth tabulating the process to translate from any frame to any other frame:
+	
+	\begin{table}[ht!]
+		\centering
+		\begin{tabular}{|c|c|c|c|c|c|} \hline
+			To$\;\setminus\;$From & $\mathbf{x}_\mathcal{I}$ & $\mathbf{x}_{\mathcal{R}\text{, EMS}}$ & $\mathbf{x}_{\mathcal{R}\text{, EM}}$ & $\mathbf{x}_{\mathcal{I}\text{, EM}}$ & $\mathbf{x}_{\mathcal{M}\text{, EM}}$ \\ \hline \hline
+			%
+			$\mathbf{x}_\mathcal{I}$ & - & $C_E^T\;\mathbf{x}_{\mathcal{R}\text{, EMS}}$ & - & - & - \\ \hline
+			%
+			$\mathbf{x}_{\mathcal{R}\text{, EMS}}$ & $C_E\mathbf{x}_\mathcal{I}$ & - & $\mathbf{x}_{\mathcal{R}\text{, EM}} + \boldsymbol{\epsilon}$ & - & - \\ \hline
+			%
+			$\mathbf{x}_{\mathcal{R}\text{, EM}}$ & - & $\mathbf{x}_{\mathcal{R}\text{, EMS}} - \boldsymbol{\epsilon}$ & - & $C_E \; \mathbf{x}_{\mathcal{I}\text{, EM}}$ & - \\ \hline
+			%
+		 	$\mathbf{x}_{\mathcal{I}\text{, EM}}$ & - & - & $C_E^T \; \mathbf{x}_{\mathcal{R}\text{, EM}}$ & - & $C_\text{313}^T \; \mathbf{x}_{\mathcal{M}\text{, EM}}$ \\ \hline
+		 	%
+			$\mathbf{x}_{\mathcal{M}\text{, EM}}$ & - & - & - & $C_\text{313} \; \mathbf{x}_{\mathcal{I}\text{, EM}}$ & - \\ \hline
+		\end{tabular}
+	\end{table}
+	
+	Entries will be populated as they are used in this derivation.  If we compose all of the frame translations defined already, we can express the position of a satellite defined in $\mathcal{M}_\text{EM}$ coordinates in terms of its $\mathcal{I}$ representation:
+	
+	\begin{equation}
+		\mathbf{x}_{\mathcal{M}\text{, EM}} = C_\text{313} \; C_E^T \; \left( C_E \mathbf{x}_\mathcal{I} - \boldsymbol{\epsilon} \right) = C_\text{313} \; \mathbf{x}_\mathcal{I} - C_\text{313} \; C_E^T \; \boldsymbol{\epsilon}
+	\end{equation}
+	
+	We can take the double time-derivative of this expression to retrieve appropriate kinematics:
+	
+	\begin{equation}
+		\dot{\mathbf{x}}_{\mathcal{M}\text{, EM}} = \dot{C}_\text{313} \; \mathbf{x}_\mathcal{I} + C_\text{313} \; \dot{\mathbf{x}}_\mathcal{I} - \dot{C}_\text{313} \; C_E^T \; \boldsymbol{\epsilon} - C_\text{313} \; \dot{C}_E^T \; \boldsymbol{\epsilon} - C_\text{313} \; C_E^T \; \dot{\boldsymbol{\epsilon}}
+	\end{equation}
+	
+	Each of our direction cosine matrix time derivatives can be expressed symbolically:
+	
+	\begin{equation}
+		\dot{C}_3(M) = \dot{M} \cdot \pd{C_3(M)}{M} = \dot{M} K_1(M)
+	\end{equation}
+	\begin{equation}
+		\dot{C}_\text{313} = \dot{C}_3(M) C_1(i) C_3(\Omega) = \dot{M} K_1(M) C_1(i) C_3(\Omega) = \dot{M} K_\text{1,313}(M)
+	\end{equation}
+	\begin{equation}
+		\dot{C}_3(E) = \dot{E} K_1(E)
+	\end{equation}
+	
+	For future steps, it is also helpful to define their double time derivative.  Note that for this problem $\ddot{E} = \ddot{M} = 0$:
+	
+	\begin{equation}
+		\ddot{C}_3(M) = \dot{M}^2 \cdot \frac{\partial^2 C_3(M)}{\partial M^2} = \dot{M}^2 K_2(M)
+	\end{equation}
+	\begin{equation}
+	\ddot{C}_\text{313} = \ddot{C}_3(M) C_1(i) C_3(\Omega) = \dot{M}^2 K_2(M) C_1(i) C_3(\Omega) = \dot{M}^2 K_\text{2,313}(M)
+	\end{equation}
+	\begin{equation}
+		\ddot{C}_3(E) = \dot{E}^2 K_2(E)
+	\end{equation}
+	
+	For some general angle $A$, the matrices $K_1(A)$ and $K_2(A)$ are defined to be:
+	
+	\begin{equation*}
+		K_1(A) = \begin{bmatrix}
+			-\sin{(A)} & \cos{(A)} & 0 \\
+			-\cos{(A)} & -\sin{(A)} & 0 \\
+			0 & 0 & 0
+		\end{bmatrix}, \quad\quad K_2(A) = \begin{bmatrix}
+		-\cos{(A)} & -\sin{(A)} & 0 \\
+		\sin{(A)} & -\cos{(A)} & 0 \\
+		0 & 0 & 0
+		\end{bmatrix}
+	\end{equation*}
+	
+	Taking the second time derivative of the position vector:
+	%
+	\begin{align}
+	\begin{split}
+		\ddot{\mathbf{x}}_{\mathcal{M}\text{, EM}}
+		&= C_\text{313} \; \left[ \ddot{\mathbf{x}}_\mathcal{I} - \ddot{C}_E^T \; \boldsymbol{\epsilon} -2 \dot{C}_E^T \; \dot{\boldsymbol{\epsilon}} - C_E^T \; \ddot{\boldsymbol{\epsilon}} \right] \\
+		&+ 2 \dot{C}_\text{313} \left[ \dot{\mathbf{x}}_\mathcal{I} - \dot{C}_E^T \; \boldsymbol{\epsilon} - C_E^T \; \dot{\boldsymbol{\epsilon}} \right] \\
+		%
+		&+ \ddot{C}_\text{313} \; \left[ \mathbf{x}_\mathcal{I} - C_E^T \; \boldsymbol{\epsilon} \right] \\
+		%
+	\end{split}
+	\end{align}
+	
+	We can make some substitutions for our direction cosine matrix time derivatives:
+	%
+	\begin{align}
+		\begin{split}
+			\ddot{\mathbf{x}}_{\mathcal{M}\text{, EM}}
+			&= C_\text{313} \; \left[ \ddot{\mathbf{x}}_\mathcal{I} - \dot{E}^2 K_2^T(E) \; \boldsymbol{\epsilon} -2 \dot{E} K_1^T(E) \; \dot{\boldsymbol{\epsilon}} - C_E^T \; \ddot{\boldsymbol{\epsilon}} \right] \\
+			&+ 2 \dot{M} K_\text{1,313}(M) \left[ \dot{\mathbf{x}}_\mathcal{I} - \dot{E} K_1^T(E) \; \boldsymbol{\epsilon} - C_E^T \; \dot{\boldsymbol{\epsilon}} \right] \\
+			%
+			&+ \dot{M}^2 K_\text{2,313}(M) \; \left[ \mathbf{x}_\mathcal{I} - C_E^T \; \boldsymbol{\epsilon} \right] \\
+			%
+		\end{split}
+	\end{align}
+	
+	And calculate various matrix products for simplification:
+	\begin{align*}
+	\begin{split}
+		K_\alpha &= C_\text{313}K_2^T(E) = C_3(M) C_1(i) C_3(\Omega) K_2^T(E) = C_3(M) C_1(i) K_2(\Omega - E) \\
+		%
+		K_\delta &= K_\text{1,313}(M)K_1^T(E) = K_1(M) C_1(i) C_3(\Omega) K_1^T(E) = K_1(M) C_1(i) K_1(\Omega - E)  \\
+		%
+		%
+		K_\zeta &= K_\text{2,313}(M) C_E^T = K_2(M) C_1(i) C_3(\Omega) C_E^T = K_2(M) C_1(i) C_3(\Omega - E)  \\
+	\end{split}
+	\end{align*}
+	%
+	Since the $\boldsymbol{\epsilon}$ vector is defined to be fixed in the $\mathcal{R}_\text{EMS}$ frame, it's time derivatives are zero.  Using these simplifications:
+	%
+	\begin{equation}
+		\ddot{\mathbf{x}}_{\mathcal{M}\text{, EM}} = C_\text{313} \ddot{\mathbf{x}}_\mathcal{I} + 2 \dot{M} K_\text{1,313}(M) \dot{\mathbf{x}}_\mathcal{I} + \dot{M}^2 K_\text{2,313}(M) \mathbf{x}_\mathcal{I} - \left[ \dot{E}^2 K_\alpha + 2 \dot{E} \dot{M} K_\delta + \dot{M}^2 K_\zeta \right] \boldsymbol{\epsilon} 
+	\end{equation}
+	
+	To simplify further, we can invert the original position relationship to retrieve the inertial position:
+	
+	\begin{equation}
+		\mathbf{x}_\mathcal{I} = C_\text{313}^T \; \mathbf{x}_{\mathcal{M}\text{, EM}} + C_E^T \; \boldsymbol{\epsilon}
+	\end{equation}
+	
+	The intermediate term $K_\text{2,313}(M) \mathbf{x}_\mathcal{I}$ is:
+	
+	\begin{equation}
+		K_\text{2,313}(M) \mathbf{x}_\mathcal{I} = K_3 \; \mathbf{x}_{\mathcal{M}\text{, EM}} + K_\zeta \; \boldsymbol{\epsilon}
+	\end{equation}
+	
+	Taking the inertial position's time derivative:
+	
+	\begin{equation}
+		\dot{\mathbf{x}}_\mathcal{I} = \dot{M} K_\text{1,313}^T(M) \; \mathbf{x}_{\mathcal{M}\text{, EM}} + \dot{E} K_1^T(E) \; \boldsymbol{\epsilon} + C_\text{313}^T \; \dot{\mathbf{x}}_{\mathcal{M}\text{, EM}}
+	\end{equation}
+	
+	The intermediate term $K_\text{1,313}(M) \dot{\mathbf{x}}_\mathcal{I}$ is:
+	
+	\begin{equation}
+		K_\text{1,313}(M) \dot{\mathbf{x}}_\mathcal{I} = -\dot{M} K_3 \mathbf{x}_{\mathcal{M}\text{, EM}} + \dot{E} K_\delta \boldsymbol{\epsilon} + K_4 \dot{\mathbf{x}}_{\mathcal{M}\text{, EM}}
+	\end{equation}
+	
+	Plugging these in and re-arranging for the inertial acceleration term:
+	%
+	\begin{equation}
+		\ddot{\mathbf{x}}_{\mathcal{M}\text{, EM}} - 2 \dot{M} K_4 \dot{\mathbf{x}}_{\mathcal{M}\text{, EM}} + \dot{M}^2 K_3 \; \mathbf{x}_{\mathcal{M}\text{, EM}} + \left[ \dot{E}^2 K_\alpha \right] \boldsymbol{\epsilon}  = C_\text{313} \ddot{\mathbf{x}}_\mathcal{I} 
+	\end{equation}
+	
+	where:
+	\begin{align*}
+	\begin{split}
+		K_3 &= \begin{bmatrix}
+			-1 & 0 & 0 \\ 0 & -1 & 0 \\ 0 & 0 & 0
+		\end{bmatrix} \\
+		K_4 &= \begin{bmatrix}
+			0 & 1 & 0 \\ -1 & 0 & 0 \\ 0 & 0 & 0
+		\end{bmatrix} \\
+	\end{split}
+	\end{align*}
+	
+	The left hand side of the equations can be expressed in terms of it's scalar components:
+	
+	\begin{align}
+	\begin{split}
+		\ddot{x} - 2\dot{M}\dot{y} - \dot{M}^2 x &= \ldots \\
+		\ddot{y} + 2\dot{M}\dot{x} - \dot{M}^2 y &= \ldots \\
+		\ddot{z} &= \ldots \\
+	\end{split}
+	\end{align}
+	
+	If we define the vector $\mathbf{k}$ to be:
+	
+	\begin{equation}
+		\mathbf{k} = \begin{bmatrix}
+			\dot{M}^2 x + 2\dot{M}\dot{y} \\
+			\dot{M}^2 y - 2\dot{M}\dot{x} \\
+			0 \\
+		\end{bmatrix}
+	\end{equation}
+	
+	We can write our EoMs succinctly:
+	
+	\begin{equation}
+		\ddot{\mathbf{x}}_{\mathcal{M}\text{, EM}} = C_\text{313} \ddot{\mathbf{x}}_\mathcal{I} + \mathbf{k} - \dot{E}^2 K_\alpha \boldsymbol{\epsilon}
+	\end{equation}
+	
+	Of interest is the $C_\text{313} \ddot{\mathbf{x}}_\mathcal{I}$ term:  It represents the sum of inertial accelerations acting on the fourth-body spacecraft, transformed into the $\mathcal{M}_\text{EM}$ frame via the appropriate direction cosine matrix. Realizing this allows us some latitude in which frame the inertial forces are defined.  As long as they get rotated into the $\mathcal{M}_\text{EM}$ frame properly, the frame they begin in does not matter.  Namely, it is quite convenient to use the CR3BP's force model to calculate the forces exerted by the Earth and the Moon directly in the $\mathcal{M}_\text{EM}$ frame with no rotation required.  The Sun force is most conveniently calculated in the $\mathcal{R}_\text{EM}$ frame.  In this frame the Sun sits at a position of $-a_E \cdot \hat{\mathcal{R}}_\text{EM}^1$ relative to $B_\text{EM}$, the origin of the frame.  If a spacecraft's position within this frame is defined to be $\mathbf{x}_{\mathcal{R}\text{, EM}}$, then the vector pointing from the spacecraft to the Sun is:
+	
+	\begin{equation}
+		\boldsymbol{\Delta}_S =\mathbf{x}_{\mathcal{R}\text{, EM}} + \frac{\boldsymbol{\epsilon}}{1 - \gamma}
+	\end{equation}
+	
+	If we substitute $\mathbf{x}_{\mathcal{R}\text{, EM}}$ for $C_E C^T_\text{313} \mathbf{x}_{\mathcal{M}\text{, EM}}$, the vector can be written in terms of the $\mathcal{M}_\text{EM}$ relative coordinate vector:
+	
+	
+	\begin{equation}
+		\boldsymbol{\Delta}_S = C_E C^T_\text{313} \mathbf{x}_{\mathcal{M}\text{, EM}} - \begin{bmatrix}
+			-a_E \\ 0 \\ 0
+		\end{bmatrix}
+	\end{equation}
+	
+	The gravitational acceleration exerted by the Sun on the spacecraft is:
+	
+	\begin{equation}
+		\mathbf{a}_\odot = -\frac{\mu_\odot}{\norm{\boldsymbol{\Delta}_S}^3} \cdot \boldsymbol{\Delta}_S
+	\end{equation}
+	
+	Which has a $\mathcal{M}_\text{EM}$-frame representation:
+	
+	\begin{equation}
+		\mathbf{a}_{\mathcal{M}, \odot} = C_\text{313} C_E^T \; \mathbf{a}_\odot = -\frac{\mu_\odot}{\norm{\boldsymbol{\Delta}_S}^3} \left( C_\text{313} C_E^T \; \boldsymbol{\Delta}_S \right)
+	\end{equation}
+	
+	If we define the relative angular quantity $B = \Omega - E$, we can simplify the number of configuration variables in our model. We can also say that $\dot{B} = -\dot{E}$.  Let's define the matrix $C_B$ to be:
+	
+	\begin{equation}
+		C_B = C_3(M) C_1(i) C_3(\Omega - E) = C_3(M) C_1(i) C_3(B) \\
+	\end{equation}
+	
+	And specify that $K_\alpha$ is also:	
+	\begin{equation}
+		K_\alpha = C_3(M) C_1(i) K_2(\Omega - E) = C_3(M) C_1(i) K_2(B)
+	\end{equation}
+	
+	And rewrite our EoMs in terms of this new angle and DCM.  Notably, $\dot{B}^2 = \frac{\mu_\odot}{a_E^3}$:
+	
+	\begin{equation}
+		\ddot{\mathbf{x}}_{\mathcal{M}\text{, EM}} = C_B \mathbf{a}_\odot - \left(\frac{\mu_\odot}{a_E^3}\right) K_\alpha \boldsymbol{\epsilon} + \mathbf{a}_\oplus +  \mathbf{a}_\text{Moon}  + \mathbf{k}
+	\end{equation}
+	
+	With this new definition:
+	
+	\begin{equation}
+		\boldsymbol{\Delta}_S = C_B^T \; \mathbf{x}_{\mathcal{M}\text{, EM}} + \begin{bmatrix}
+			a_E \\ 0 \\ 0
+		\end{bmatrix}
+	\end{equation}
+	
+	And where the Earth and Moon's gravity are defined to be:
+	
+	\begin{equation*}
+		\mathbf{a}_\oplus = -\frac{\mu_\oplus}{\norm{\boldsymbol{\Delta}_E}^3} \cdot \boldsymbol{\Delta}_E, \quad\quad 
+		\mathbf{a}_\text{Moon} = -\frac{\mu_\text{Moon}}{\norm{\boldsymbol{\Delta}_M}^3} \cdot \boldsymbol{\Delta}_M
+	\end{equation*}
+	
+	\begin{equation}
+	\boldsymbol{\Delta}_E = \mathbf{x}_{\mathcal{M}\text{, EM}} - \begin{bmatrix}
+		-\mu \cdot a_M \\ 0 \\ 0
+	\end{bmatrix},\quad\quad\boldsymbol{\Delta}_M =  \mathbf{x}_{\mathcal{M}\text{, EM}} - \begin{bmatrix}
+	(1-\mu) \cdot a_M \\ 0 \\ 0
+	\end{bmatrix}
+	\end{equation}
+	
+	$M$ and $B$ each evolve at a constant rate, and we assume that the Earth starts at $E(t=0) = 0$:
+	
+	\begin{equation*}
+		M(t) = M_0 + t \cdot \sqrt{\frac{\mu_\oplus + \mu_\text{Moon}}{a_M^3}}
+	\end{equation*}
+	
+	\begin{equation*}
+		B(t) = \Omega_0 - t \cdot \sqrt{\frac{\mu_\odot + \mu_\oplus + \mu_\text{Moon}}{a_E^3}}
+	\end{equation*}
+	
+	\section{Nondimensionalizing the EoMs}
+	
+	The nondimensionalization process is straightforward.  All angle quantities remain in radians, and based on our choice of characteristic length (the Moon's SMA $a_M$) and characteristic time (the inverse of the Moon's mean motion), $\dot{M}$ becomes $1$.  We can also decompose $\epsilon$:
+	
+	\begin{equation*}
+		\boldsymbol{\epsilon} = -(1-\gamma) \boldsymbol{\varepsilon} = -(1-\gamma) \begin{bmatrix}
+			-a_E \\ 0 \\ 0
+		\end{bmatrix}
+	\end{equation*}
+	
+	With this substitution done first, then nondimensionalizing, we can write our EoMs in their final form.  Some significant cleaning-up is done to get these EoMs in their simplest possible form.  We can also apply a scaling parameter $\sigma$ to the Sun effects to gradually 'turn the effect of the Sun on':
+	
+	\begin{equation}
+		\ddot{\mathbf{x}}_{\mathcal{M}\text{, EM}} = \sigma \left[ C_B  \mathbf{a}_{\odot} + \mu_\odot \left(\frac{1-\gamma}{a_E^3}\right) K_\alpha \boldsymbol{\varepsilon} \right] + \mathbf{a}_\oplus +  \mathbf{a}_\text{Moon}  + \mathbf{k}
+	\end{equation}
+	
+	\begin{equation}
+		\mathbf{a}_{\odot} = -\frac{\mu_\odot}{\norm{\boldsymbol{\Delta}_S}^3} \cdot \boldsymbol{\Delta}_S
+	\end{equation}
+	
+	\begin{equation}
+		\mathbf{a}_{\oplus} = -\frac{1-\mu}{\norm{\boldsymbol{\Delta}_E}^3} \cdot \boldsymbol{\Delta}_E
+	\end{equation}
+	
+	\begin{equation}
+	\mathbf{a}_\text{Moon} = -\frac{\mu}{\norm{\boldsymbol{\Delta}_M}^3} \cdot \boldsymbol{\Delta}_M
+	\end{equation}
+	
+	\begin{equation}
+		\boldsymbol{\Delta}_S = C_B^T \; \mathbf{x}_{\mathcal{M}\text{, EM}} - \boldsymbol{\varepsilon}, \quad\quad 
+		\boldsymbol{\varepsilon} = \begin{bmatrix}
+			-a_E \\ 0 \\ 0
+		\end{bmatrix}
+	\end{equation}
+	
+	\begin{equation}
+		\boldsymbol{\Delta}_E = \mathbf{x}_{\mathcal{M}\text{, EM}} - \begin{bmatrix}
+			 -\mu \\ 0 \\ 0
+		\end{bmatrix}, \quad\quad \boldsymbol{\Delta}_M = \mathbf{x}_{\mathcal{M}\text{, EM}} - \begin{bmatrix}
+		1 - \mu \\ 0 \\ 0
+		\end{bmatrix}
+	\end{equation}
+	
+	\begin{equation}
+		\mathbf{k} = \begin{bmatrix}
+			x + 2\dot{y} \\
+			y - 2\dot{x} \\
+			0 \\
+		\end{bmatrix}
+	\end{equation}
+	
+	\begin{equation}
+		C_B = C_3(M) C_1(i) C_3(B) \\
+	\end{equation}
+	%
+	\begin{equation}
+		K_\alpha = C_3(M) C_1(i) K_2(B)
+	\end{equation}
+	
+	\begin{equation}
+		M(\tau) = M_0 + \tau, \quad\quad B(\tau) = \Omega_0 - \tau\sqrt{\frac{\mu_\odot + 1}{a_E^3}}
+	\end{equation}
+	
+	\begin{equation*}
+		K_1(A) = \begin{bmatrix}
+			-\sin{(A)} & \cos{(A)} & 0 \\
+			-\cos{(A)} & -\sin{(A)} & 0 \\
+			0 & 0 & 0
+		\end{bmatrix}, \quad\quad K_2(A) = \begin{bmatrix}
+			-\cos{(A)} & -\sin{(A)} & 0 \\
+			\sin{(A)} & -\cos{(A)} & 0 \\
+			0 & 0 & 0
+		\end{bmatrix}
+	\end{equation*}
+	
+	Where $a_E$ is the Earth-Moon system's nondimensional semimajor axis about the Sun-Earth-Moon barycenter, and $\dot{B}$ is the nondimensionalized mean motion of the Earth-Moon system's orbit about the Sun-Earth-Moon barycenter.
+	
+	\begin{equation}
+		1 - \gamma = \frac{\mu_\odot}{\mu_\odot + \mu_\oplus + \mu_\text{Moon}}
+	\end{equation}
+	
+	is a quantity that directly correlates with the strength of the Sun's gravity.  When $\sigma = 0$, the Sun doesn't exert any gravity and the model above simplifies to be the CR3BP.  Furthermore if $i = 0$, the model simplifies down to a more traditional BCR4BP model.
+	
+	\subsection{Continuations}
+	
+	There are a number of system quantities for which we'd like to do continuations over:
+	
+	\begin{enumerate}
+		\item $\sigma$ - varying the strength of the Sun's gravity
+		\item $M_0$ - varying the initial phasing of the Moon in it's orbit
+		\item $i$ - varying the Moon's inclination away from the ecliptic, fairly stable at $\approxeq 5.145^o$
+		\item $\Omega$ - varying the right ascension of the ascending node of the Moon's orbit
+	\end{enumerate}
+	
+	\hrule \vspace{1em}
+	
+	Beginning with the necessary partial derivatives to augment the state transition matrix and achieve these continuations:
+	
+	\begin{equation}
+		\pd{\ddot{\mathbf{x}}_{\mathcal{M}\text{, EM}}}{\sigma} = \left[ C_B  \mathbf{a}_{\odot} + \mu_\odot \left(\frac{1-\gamma}{a_E^3}\right) K_\alpha \boldsymbol{\varepsilon} \right]
+	\end{equation}
+	
+	\hrule \vspace{1em}
+	
+	Moving on to the synodic position:
+	
+	\begin{equation*}
+		\pd{\boldsymbol{\Delta}_E}{\mathbf{x}_{\mathcal{M}\text{, EM}}} = \mathbf{I}_{3\times 3}
+	\end{equation*}
+	
+	\begin{equation*}
+		\pddown{\boldsymbol{\Delta}_E \cdot \boldsymbol{\Delta}_E}{\mathbf{x}_{\mathcal{M}\text{, EM}}} = 2 \boldsymbol{\Delta}_E^T
+	\end{equation*}
+	
+	\begin{equation*}
+		\pddown{ [\boldsymbol{\Delta}_E \cdot \boldsymbol{\Delta}_E ]^{-3/2} }{\mathbf{x}_{\mathcal{M}\text{, EM}}} = -3 \boldsymbol{\Delta}_E^T [\boldsymbol{\Delta}_E \cdot \boldsymbol{\Delta}_E ]^{-5/2}
+	\end{equation*}
+	
+	\begin{align}
+	\begin{split}
+		\pd{\mathbf{a}_{\oplus}}{ \mathbf{x}_{\mathcal{M}\text{, EM}} } 
+		&= -(1-\mu) \pddown{ \boldsymbol{\Delta}_E [\boldsymbol{\Delta}_E\cdot\boldsymbol{\Delta}_E]^{-3/2} }{ \mathbf{x}_{\mathcal{M}\text{, EM}} } \\
+		%
+		&= -(1-\mu) \left[ \pd{ \boldsymbol{\Delta}_E}{ \mathbf{x}_{\mathcal{M}\text{, EM}} }[\boldsymbol{\Delta}_E\cdot\boldsymbol{\Delta}_E]^{-3/2} + \boldsymbol{\Delta}_E \pd{ [\boldsymbol{\Delta}_E\cdot\boldsymbol{\Delta}_E]^{-3/2} }{ \mathbf{x}_{\mathcal{M}\text{, EM}} } \right] \\
+		%
+		&= -(1-\mu) \left[ (\boldsymbol{\Delta}_E\cdot\boldsymbol{\Delta}_E) \mathbf{I}_{3\times 3} - 3 \boldsymbol{\Delta}_E \boldsymbol{\Delta}_E^T \right] [\boldsymbol{\Delta}_E \cdot \boldsymbol{\Delta}_E ]^{-5/2} \\
+		%
+	\end{split}
+	\end{align}
+	
+	\hrule \vspace{1em}
+	
+	\begin{equation*}
+		\pd{\boldsymbol{\Delta}_M}{\mathbf{x}_{\mathcal{M}\text{, EM}}} = \mathbf{I}_{3\times 3}
+	\end{equation*}
+	
+	\begin{equation*}
+		\pddown{\boldsymbol{\Delta}_M \cdot \boldsymbol{\Delta}_M}{\mathbf{x}_{\mathcal{M}\text{, EM}}} = 2 \boldsymbol{\Delta}_M^T
+	\end{equation*}
+	
+	\begin{equation*}
+		\pddown{ [\boldsymbol{\Delta}_M \cdot \boldsymbol{\Delta}_M ]^{-3/2} }{\mathbf{x}_{\mathcal{M}\text{, EM}}} = -3 \boldsymbol{\Delta}_M^T [\boldsymbol{\Delta}_M \cdot \boldsymbol{\Delta}_M ]^{-5/2}
+	\end{equation*}
+	
+	\begin{align}
+	\begin{split}
+		\pd{\mathbf{a}_\text{Moon}}{ \mathbf{x}_{\mathcal{M}\text{, EM}} } 
+		&= -\mu \pddown{ \boldsymbol{\Delta}_M [\boldsymbol{\Delta}_M\cdot\boldsymbol{\Delta}_M]^{-3/2} }{ \mathbf{x}_{\mathcal{M}\text{, EM}} } \\
+		%
+		&= -\mu \left[ \pd{ \boldsymbol{\Delta}_M}{ \mathbf{x}_{\mathcal{M}\text{, EM}} }[\boldsymbol{\Delta}_M\cdot\boldsymbol{\Delta}_M]^{-3/2} + \boldsymbol{\Delta}_M \pd{ [\boldsymbol{\Delta}_M\cdot\boldsymbol{\Delta}_M]^{-3/2} }{ \mathbf{x}_{\mathcal{M}\text{, EM}} } \right] \\
+		%
+		&= -\mu \left[ (\boldsymbol{\Delta}_M\cdot\boldsymbol{\Delta}_M) \mathbf{I}_{3\times 3} - 3 \boldsymbol{\Delta}_M \boldsymbol{\Delta}_M^T \right] [\boldsymbol{\Delta}_M \cdot \boldsymbol{\Delta}_M ]^{-5/2} \\
+		%
+	\end{split}
+	\end{align}
+	
+	\hrule \vspace{1em}
+	
+	\begin{equation*}
+		\pd{\boldsymbol{\Delta}_S}{\mathbf{x}_{\mathcal{M}\text{, EM}}} = C_B
+	\end{equation*}
+	
+	\begin{equation*}
+		\pddown{\boldsymbol{\Delta}_S \cdot \boldsymbol{\Delta}_S}{\mathbf{x}_{\mathcal{M}\text{, EM}}} = \pd{\boldsymbol{\Delta}_S}{\mathbf{x}_{\mathcal{M}\text{, EM}}} \cdot \boldsymbol{\Delta}_S + \boldsymbol{\Delta}_S \cdot \pd{\boldsymbol{\Delta}_S}{\mathbf{x}_{\mathcal{M}\text{, EM}}} = 2 \boldsymbol{\Delta}_S^T C_B
+	\end{equation*}
+	
+	\begin{equation*}
+		\pddown{ [\boldsymbol{\Delta}_S \cdot \boldsymbol{\Delta}_S]^{-3/2} }{\mathbf{x}_{\mathcal{M}\text{, EM}}} = -3 \boldsymbol{\Delta}_S^T C_B [\boldsymbol{\Delta}_S \cdot \boldsymbol{\Delta}_S]^{-5/2}
+	\end{equation*}
+	
+	\begin{align}
+	\begin{split}
+		\pd{\mathbf{a}_{\odot}}{ \mathbf{x}_{\mathcal{M}\text{, EM}} } 
+		&= -\mu_\odot \pddown{ \boldsymbol{\Delta}_S [\boldsymbol{\Delta}_S\cdot\boldsymbol{\Delta}_S]^{-3/2} }{ \mathbf{x}_{\mathcal{M}\text{, EM}} } \\
+		%
+		&= -\mu_\odot \left[ \pd{ \boldsymbol{\Delta}_S}{ \mathbf{x}_{\mathcal{M}\text{, EM}} }[\boldsymbol{\Delta}_S\cdot\boldsymbol{\Delta}_S]^{-3/2} + \boldsymbol{\Delta}_S \pd{ [\boldsymbol{\Delta}_S\cdot\boldsymbol{\Delta}_S]^{-3/2} }{ \mathbf{x}_{\mathcal{M}\text{, EM}} } \right] \\
+		%
+		&= -\mu_\odot \left[ (\boldsymbol{\Delta}_S\cdot\boldsymbol{\Delta}_S) \mathbf{I}_{3\times 3} - 3 \boldsymbol{\Delta}_S \boldsymbol{\Delta}_S^T \right] C_B [\boldsymbol{\Delta}_S \cdot \boldsymbol{\Delta}_S]^{-5/2} \\
+		%
+	\end{split}
+	\end{align}
+	
+	\hrule \vspace{1em}
+	
+	\begin{equation*}
+		\pd{\mathbf{k}}{ \mathbf{x}_{\mathcal{M}\text{, EM}} } = -K_3
+	\end{equation*}
+	
+	\hrule \vspace{1em}
+	
+	Which, in total, is:
+	
+	\begin{equation}
+		\ddot{\mathbf{x}}_{\mathcal{M}\text{, EM}} = \sigma \left[ C_B  \mathbf{a}_{\odot} + \mu_\odot \left(\frac{1-\gamma}{a_E^3}\right) K_\alpha \boldsymbol{\varepsilon} \right] + \mathbf{a}_\oplus +  \mathbf{a}_\text{Moon}  + \mathbf{k}
+	\end{equation}
+	
+	\begin{align}
+	\begin{split}
+		\pd{\ddot{\mathbf{x}}_{\mathcal{M}\text{, EM}}}{ \mathbf{x}_{\mathcal{M}\text{, EM}} } 
+		&= \pddown{\sigma \left[ C_B  \mathbf{a}_{\odot} + \mu_\odot \left(\frac{1-\gamma}{a_E^3}\right) K_\alpha \boldsymbol{\varepsilon} \right] + \mathbf{a}_\oplus +  \mathbf{a}_\text{Moon}  + \mathbf{k}}{ \mathbf{x}_{\mathcal{M}\text{, EM}} } \\
+		%
+		&= \sigma C_B \pd{ \mathbf{a}_{\odot} }{ \mathbf{x}_{\mathcal{M}\text{, EM}} } + \pd{ \mathbf{a}_\oplus }{ \mathbf{x}_{\mathcal{M}\text{, EM}} } + \pd{ \mathbf{a}_\text{Moon} }{ \mathbf{x}_{\mathcal{M}\text{, EM}} } + \pd{ \mathbf{k} }{ \mathbf{x}_{\mathcal{M}\text{, EM}} } \\
+		%
+		&= \sigma \mu_\odot C_B \left[ 3 \boldsymbol{\Delta}_S \boldsymbol{\Delta}_S^T - (\boldsymbol{\Delta}_S\cdot\boldsymbol{\Delta}_S) \mathbf{I}_{3\times 3} \right] C_B [\boldsymbol{\Delta}_S \cdot \boldsymbol{\Delta}_S]^{-5/2} \\
+		&+ (1-\mu) \left[ 3 \boldsymbol{\Delta}_E \boldsymbol{\Delta}_E^T - (\boldsymbol{\Delta}_E\cdot\boldsymbol{\Delta}_E) \mathbf{I}_{3\times 3} \right] [\boldsymbol{\Delta}_E \cdot \boldsymbol{\Delta}_E ]^{-5/2} \\
+		&+ \mu \left[ 3 \boldsymbol{\Delta}_M \boldsymbol{\Delta}_M^T - (\boldsymbol{\Delta}_M\cdot\boldsymbol{\Delta}_M) \mathbf{I}_{3\times 3} \right] [\boldsymbol{\Delta}_M \cdot \boldsymbol{\Delta}_M ]^{-5/2} - K_3 \\
+	\end{split}
+	\end{align}
+	
+	Should one of those $C_B$'s be a $C_B^T$?
+	
+	\hrule \vspace{1em}
+	
+	\begin{equation*}
+		\pd{C_B}{M_0} = K_1(M) C_1(i) C_3(B)
+	\end{equation*}
+	
+	\begin{equation*}
+		\pd{K_\alpha}{M_0} = K_1(M) C_1(i) K_2(B)
+	\end{equation*}
+	
+	\begin{equation*}
+		\pd{\boldsymbol{\Delta}_S}{M_0} = \pddown{C_B^T \; \mathbf{x}_{\mathcal{M}\text{, EM}} - \boldsymbol{\varepsilon}}{M_0} = \left[ \pd{C_B}{M_0} \right]^T \mathbf{x}_{\mathcal{M}\text{, EM}}
+	\end{equation*}
+	
+	\begin{equation*}
+		\pd{\boldsymbol{\Delta}_S \cdot \boldsymbol{\Delta}_S}{M_0} = 2\left( \boldsymbol{\Delta}_S^T \left[ \pd{C_B}{M_0} \right]^T \mathbf{x}_{\mathcal{M}\text{, EM}} \right)
+	\end{equation*}
+	
+	\begin{equation*}
+		\pddown{ [\boldsymbol{\Delta}_S \cdot \boldsymbol{\Delta}_S]^{-3/2} }{M_0} = -3 \left( \boldsymbol{\Delta}_S^T \left[ \pd{C_B}{M_0} \right]^T \mathbf{x}_{\mathcal{M}\text{, EM}} \right) [\boldsymbol{\Delta}_S \cdot \boldsymbol{\Delta}_S]^{-5/2}
+	\end{equation*}
+	
+	\begin{align}
+	\begin{split}
+		\pd{\mathbf{a}_{\odot}}{M_0} 
+		&= -\mu_\odot \pddown{ \boldsymbol{\Delta}_S [\boldsymbol{\Delta}_S \cdot \boldsymbol{\Delta}_S]^{-3/2} }{M_0} \\
+		&= -\mu_\odot \left[ \pd{ \boldsymbol{\Delta}_S }{M_0}[\boldsymbol{\Delta}_S \cdot \boldsymbol{\Delta}_S]^{-3/2} + \boldsymbol{\Delta}_S  \pddown{ [\boldsymbol{\Delta}_S \cdot \boldsymbol{\Delta}_S]^{-3/2} }{M_0} \right] \\
+		&= -\mu_\odot \left[ (\boldsymbol{\Delta}_S \cdot \boldsymbol{\Delta}_S)\mathbf{I}_{3\times 3} - 3 \boldsymbol{\Delta}_S \boldsymbol{\Delta}_S^T \right] [\boldsymbol{\Delta}_S \cdot \boldsymbol{\Delta}_S]^{-5/2} \left[ \pd{C_B}{M_0} \right]^T \mathbf{x}_{\mathcal{M}\text{, EM}} \\
+		&= \left[\pd{\mathbf{a}_{\odot}}{ \mathbf{x}_{\mathcal{M}\text{, EM}} }\right] C_B^T \left[ \pd{C_B}{M_0} \right]^T \mathbf{x}_{\mathcal{M}\text{, EM}} \\
+	\end{split}
+	\end{align}
+	
+	Missing is the final composed expression
+	
+	\hrule \vspace{1em}
+	
+	\begin{equation*}
+		\pd{C_B}{\Omega} = C_3(M) C_1(i) K_1(B)
+	\end{equation*}
+	
+	\begin{equation*}
+		\pd{K_\alpha}{\Omega} = K_1(M) C_1(i) \pd{K_2(B)}{\Omega}
+	\end{equation*}
+	
+	\begin{equation*}
+		\pd{K_2(B)}{\Omega} = -K_1^T(B)
+	\end{equation*}
+	
+	\begin{equation*}
+		\pd{\boldsymbol{\Delta}_S}{\Omega} = \pddown{C_B^T \; \mathbf{x}_{\mathcal{M}\text{, EM}} - \boldsymbol{\varepsilon}}{\Omega} = \left[ \pd{C_B}{\Omega} \right]^T \mathbf{x}_{\mathcal{M}\text{, EM}}
+	\end{equation*}
+	
+	\begin{equation*}
+		\pd{\boldsymbol{\Delta}_S \cdot \boldsymbol{\Delta}_S}{M_0} = 2\left( \boldsymbol{\Delta}_S^T \left[ \pd{C_B}{\Omega} \right]^T \mathbf{x}_{\mathcal{M}\text{, EM}} \right)
+	\end{equation*}
+	
+	\begin{equation*}
+		\pddown{ [\boldsymbol{\Delta}_S \cdot \boldsymbol{\Delta}_S]^{-3/2} }{\Omega} = -3 \left( \boldsymbol{\Delta}_S^T \left[ \pd{C_B}{\Omega} \right]^T \mathbf{x}_{\mathcal{M}\text{, EM}} \right) [\boldsymbol{\Delta}_S \cdot \boldsymbol{\Delta}_S]^{-5/2}
+	\end{equation*}
+	
+	\begin{align}
+	\begin{split}
+		\pd{\mathbf{a}_{\odot}}{\Omega}
+		&= -\mu_\odot \left[ (\boldsymbol{\Delta}_S \cdot \boldsymbol{\Delta}_S)\mathbf{I}_{3\times 3} - 3 \boldsymbol{\Delta}_S \boldsymbol{\Delta}_S^T \right] [\boldsymbol{\Delta}_S \cdot \boldsymbol{\Delta}_S]^{-5/2} \left[ \pd{C_B}{\Omega} \right]^T \mathbf{x}_{\mathcal{M}\text{, EM}} \\
+		&= \left[\pd{\mathbf{a}_{\odot}}{ \mathbf{x}_{\mathcal{M}\text{, EM}} }\right] C_B^T \left[ \pd{C_B}{\Omega} \right]^T \mathbf{x}_{\mathcal{M}\text{, EM}}
+	\end{split}
+	\end{align}
+	
+	Missing is the final composed expression
+	
+	\hrule \vspace{1em}
+	
+	\begin{equation*}
+		\pd{C_B}{i} = C_3(M) \pd{C_1(i)}{i} C_3(B)
+	\end{equation*}
+	
+	\begin{equation*}
+		\pd{K_\alpha}{i} = K_1(M) \pd{C_1(i)}{i} K_2(B)
+	\end{equation*}
+	
+	\begin{equation*}
+		\pd{C_1(i)}{i} = \begin{bmatrix}
+			0 & 0 & 0 \\
+			0 & -\sin{(i)} & \cos{(i)} \\
+			0 & -\cos{(i)} & -\sin{(i)} \\
+		\end{bmatrix}
+	\end{equation*}
+	
+	\begin{equation*}
+		\pd{\boldsymbol{\Delta}_S}{i} = \pddown{C_B^T \; \mathbf{x}_{\mathcal{M}\text{, EM}} - \boldsymbol{\varepsilon}}{i} = \left[ \pd{C_B}{i} \right]^T \mathbf{x}_{\mathcal{M}\text{, EM}}
+	\end{equation*}
+	
+	\begin{equation*}
+		\pd{\boldsymbol{\Delta}_S \cdot \boldsymbol{\Delta}_S}{i} = 2\left( \boldsymbol{\Delta}_S^T \left[ \pd{C_B}{i} \right]^T \mathbf{x}_{\mathcal{M}\text{, EM}} \right)
+	\end{equation*}
+	
+	\begin{equation*}
+		\pddown{ [\boldsymbol{\Delta}_S \cdot \boldsymbol{\Delta}_S]^{-3/2} }{i} = -3 \left( \boldsymbol{\Delta}_S^T \left[ \pd{C_B}{i} \right]^T \mathbf{x}_{\mathcal{M}\text{, EM}} \right) [\boldsymbol{\Delta}_S \cdot \boldsymbol{\Delta}_S]^{-5/2}
+	\end{equation*}
+	
+	\begin{align}
+	\begin{split}
+		\pd{\mathbf{a}_{\odot\gamma}}{i}
+		&= -(1 - \sigma)^{-1} \left[ (\boldsymbol{\Delta}_S \cdot \boldsymbol{\Delta}_S)\mathbf{I}_{3\times 3} - 3 \boldsymbol{\Delta}_S \boldsymbol{\Delta}_S^T \right] [\boldsymbol{\Delta}_S \cdot \boldsymbol{\Delta}_S]^{-5/2} \left[ \pd{C_B}{i} \right]^T \mathbf{x}_{\mathcal{M}\text{, EM}} \\
+		&= \left[\pd{\mathbf{a}_{\odot\gamma}}{ \mathbf{x}_{\mathcal{M}\text{, EM}} }\right] C_B^T \left[ \pd{C_B}{i} \right]^T \mathbf{x}_{\mathcal{M}\text{, EM}}
+	\end{split}
+	\end{align}
+	
+	Missing is the final composed expression
+	
+\end{document}
