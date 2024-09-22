@@ -1,0 +1,12 @@
+1) Ensure all functions and scripts have a docstring
+
+2) Ensure all comments and docstrings are up to date (complete sentences)
+
+3) Run MBeautifier
+
+4) Unindent docstrings (undoing MBeautifier)
+
+5) Wrap any code lines longer than the ruler
+
+6) Align wrapped lines in a way that makes sense
+	 - Operators should lead wrapped terms, not trail them

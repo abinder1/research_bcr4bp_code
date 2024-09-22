@@ -1,0 +1,13 @@
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+% [DESCRIPTION]
+%
+% Author:  Andrew Binder (year_of_first_publish)
+%
+% Inputs:
+%   var = [units](size)<datatype> | description
+%   var = [units](size)<datatype> or [units](size)<datatype> | desc.
+%
+% Outputs:
+%   var = [units](size)<datatype> | description
+%   var = [units](size)<datatype> or [units](size)<datatype> | desc.
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
