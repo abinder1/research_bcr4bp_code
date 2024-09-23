@@ -128,71 +128,210 @@ end
 X(end) = 0;
 
 %% Construct the multiple-shooting algorithm for the homotopy process
-F_series = rand(1,3); F = 1;  % Dummy initializations of the constraint vector
+G_norm_srz = rand(1,3); G = 1;  % Dummy initializations for the constraint vec.
 
-while norm(F) > 1e-12
-    % Propagate the orbit for the sigma value in the 'X' vector
-    for k = 1:1:number_arcs
-        % Shift the starting Arg. Lat. and relative angle B with arc's epoch
-        starting_M = M0 + int_results(k).epoch;
-        starting_B = RAAN - sqrt((muS + 1)/aE^3) * int_results(k).epoch;
+% How many revs through our continuation process do we want to perform?
+M_start = 1;
+M_end = 1;
 
-        % Define initial conditions and anonymous func. for integration
-        sv_k = [int_results(k).x_0k; reshape(eye(7), [49,1])];
+% Which col. of the singular value decomposition do we consider our nullspace?
+tan_vec_select = length(X);
 
-        % 'M0' and 'RAAN' for this sim start shifted wrt their normal values
-        ode_func = @(t, y) bcir4bp_stm(t, y, ...
-                                       earth_moon_massparam = mu, ...
-                                       sun_sgp_nondim = muS, ...
-                                       sun_effect_slider = X(end), ...
-                                       moon_arglat_at_epoch = starting_M, ...
-                                       moon_inclination = inc, ...
-                                       moon_right_ascension = starting_B, ...
-                                       earth_sma_nondim = aE, ...
-                                       stm_enabled = true);
+% What pseudoarclength stepsize do we want to start at?  Changes adaptively
+ds = 1e-4;
 
-        % Return a solution structure corresponding to arc 'k'
-        ssk = ode45(ode_func, [0, int_results(k).int_time], sv_k, opts);
+% When is our N-R scheme successful?
+constraint_tolerance = 1e-12;
 
-        % Unpack the final state of the propagation
-        x_fk = ssk.y(1:6, end);
+% Do we want to plot every converged answer we find?
+plot_converged_solns = true;
 
-        % Unpack the augmented state transition matrix and decompose
-        % into it's constitutent partial derivative matrices and vectors
-        augmented_STMf = reshape(ssk.y(7:55, end), [7 7]);
+% Do we want to plot every trajectory propagated by the MS scheme?
+plot_intermediates = true;
 
-        STMf = augmented_STMf(1:6, 1:6);
-        dxf_dsigma = augmented_STMf(1:6, 7);
+for M = M_start:M_end
+    q = 1;  % How many revs thru the N-R scheme have we performed?
 
-        % Pack up all of the results into the solution structure
-        int_results(k).x_fk = x_fk;
-        int_results(k).stm_fk = STMf;
-        int_results(k).dxf_dsigmak = dxf_dsigma;
-    end
+    while norm(G) > constraint_tolerance
+        % Propagate the orbit for the sigma value in the 'X' vector
+        parfor k = 1:number_arcs
+            % Shift the starting Arg. Lat. and relative angle B with arc's epoch
+            starting_M = M0 + int_results(k).epoch;
+            starting_B = RAAN - sqrt((muS + 1)/aE^3) * int_results(k).epoch;
+    
+            % Define initial conditions and anonymous func. for integration
+            sv_k = [int_results(k).x_0k; reshape(eye(7), [49,1])];
+    
+            % 'M0' and 'RAAN' for this sim start shifted wrt their normal values
+            ode_func = @(t, y) bcir4bp_stm(t, y, ...
+                                           earth_moon_massparam = mu, ...
+                                           sun_sgp_nondim = muS, ...
+                                           sun_effect_slider = X(end), ...
+                                           moon_arglat_at_epoch = starting_M, ...
+                                           moon_inclination = inc, ...
+                                           moon_right_ascension = starting_B, ...
+                                           earth_sma_nondim = aE, ...
+                                           stm_enabled = true);
+    
+            % Return a solution structure corresponding to arc 'k'
+            ssk = ode45(ode_func, [0, int_results(k).int_time], sv_k, opts);
 
-    % From the integrated information, construct 'F' and 'DF' appropriately
-    F = zeros([6 * number_arcs, 1]);
-    DF = zeros([6 * number_arcs, 6 * number_arcs + 1]);
-
-    for k = 1:1:(number_arcs)
-        index_range_a = (6*k-5):1:(6*k);
-        index_range_b = (6*k+1):1:(6*k+6);
-
-        if k < number_arcs
-            F(index_range_a) = int_results(k).x_fk - int_results(k + 1).x_0k;
-
-            % Tile the STM and an identity matrix in the right spots
-            DF(index_range_a, index_range_a) = int_results(k).stm_fk;
-            DF(index_range_a, index_range_b) = -eye(6);
+            if plot_intermediates == true
+                % Plot the unconverged MS arcs
+                plot3(ssk.y(1,:), ssk.y(2,:), ssk.y(3, :), 'r')
+            end
+    
+            % Unpack the final state of the propagation
+            x_fk = ssk.y(1:6, end);
+    
+            % Unpack the augmented state transition matrix and decompose
+            % into it's constitutent partial derivative matrices and vectors
+            augmented_STMf = reshape(ssk.y(7:55, end), [7 7]);
+    
+            STMf = augmented_STMf(1:6, 1:6);
+            dxf_dsigma = augmented_STMf(1:6, 7);
+    
+            % Pack up all of the results into the solution structure
+            int_results(k).x_fk = x_fk;
+            int_results(k).stm_fk = STMf;
+            int_results(k).dxf_dsigmak = dxf_dsigma;
+        end
+    
+        % From the integrated information, construct 'F' and 'DF' appropriately
+        F = zeros([6 * number_arcs, 1]);
+        DF = zeros([6 * number_arcs, 6 * number_arcs + 1]);
+    
+        for k = 1:1:(number_arcs)
+            index_range_a = (6*k-5):1:(6*k);
+            index_range_b = (6*k+1):1:(6*k+6);
+    
+            if k < number_arcs
+                F(index_range_a) = int_results(k).x_fk - int_results(k + 1).x_0k;
+    
+                % Tile the STM and an identity matrix in the right spots
+                DF(index_range_a, index_range_a) = int_results(k).stm_fk;
+                DF(index_range_a, index_range_b) = -eye(6);
+            else
+                F(index_range_a) = int_results(k).x_fk - int_results(1).x_0k;
+    
+                % The periodicity condition is enforced here, wraps to #1 IC
+                DF(index_range_a, index_range_a) = int_results(k).stm_fk;
+                DF(index_range_a, 1:6) = -eye(6);
+            end
+    
+            % Add in the sigma partial derivative information
+            DF(index_range_a, end) = int_results(k).dxf_dsigmak;
+        end
+    
+        % Find the singular values and nullspace vector for pseudoarclength
+        [~, S, V] = svd(DF);
+    
+        if M > M_start
+            % Determine if my current 'X' vector lies along the nullspace
+            % at a distance of 'ds' from my last converged answer 'last_X'
+            F_pseudoarc = dot(X - last_X, step_tangent_vector) - ds;
         else
-            F(index_range_a) = int_results(k).x_fk - int_results(1).x_0k;
+            % If we are on the first PAC rev and first iter through it,
+            % we want to set our 'tangent_vector' or the unit vector
+            % pointing into our nullspace
+            if q == 1  
+                tangent_vector = V(:, tan_vec_select)';
 
-            % The periodicity condition is enforced here, wraps to #1 IC
-            DF(index_range_a, index_range_a) = int_results(k).stm_fk;
-            DF(index_range_a, 1:6) = -eye(6);
+                % 'step_tangent_vector' is the unit vector oriented in
+                % the correct pointing direction (pos or neg)
+                step_tangent_vector = tangent_vector;
+            end
+    
+            % There is no previous converged answer to compare against,
+            % so for M = M_start this constraint is zero
+            F_pseudoarc = 0;
         end
 
-        % Add in the sigma partial derivative information
-        DF(index_range_a, end) = int_results(k).dxf_dsigmak;
+        % Make the DF matrix square - the nullspace is linearly indep.
+        DG = [DF; step_tangent_vector];
+        G = [F; F_pseudoarc];  % Append the step distance constraint
+
+        % Diagnostic output
+        fprintf("Norm of constraint vector:  %1.4e\n", norm(G))
+
+        % Prematurely break out of the N-R algorithm if constraint norm
+        % is satisfied by our previous step (avoiding applying another dX)
+        if norm(G) < constraint_tolerance
+            break
+        end
+
+        % Solve this system the 'best' way possible
+        [delta_x, step_residual] = robust_delta_X_DG_G(DG, G);
+
+        % Compute pseudo-arclength stepsize adaptation factors
+        if q == 1  % If this is the first rev through the N-R process
+            first_SL = norm(delta_x);  % How big was our step?
+        end
+    
+        if q == 2  % If this is the second rev through the N-R process
+            contr_rate = norm(delta_x) / first_SL;  % Stepsize changing fast?
+        end
+    
+        if M > M_start  % Is this the first rev through PAC process?  If not:
+            dot_prod = round(dot(step_tangent_vector, signum * tangent_vector), 13);
+        else
+            dot_prod = round(dot(tangent_vector, tangent_vector), 13);
+        end
+        
+        % What angle does current nullspace make with continuation nullspace?
+        step_angle = acos(dot_prod);
+
+        % Modify our design variables
+        X = X - delta_x;
+
+        % Check that G is changing (e.g. dropping monotonically)
+        % This is a moving average of the constraint vector's norm
+        G_norm_srz(1) = [];  G_norm_srz = [G_norm_srz norm(G)];
+        average_change = mean(abs(diff(G_norm_srz))) / norm(G);
+    
+        if average_change < 1e-4
+            error("G is not falling monotonically - breaking...")
+        end
+
+        % Deal the modified initial conditions back out to the struct
+        for k = 1:1:number_arcs
+            int_results(k).x_0k = X(6*k-5:6*k);
+        end
+
+        q = q + 1;
+
+        if q > 50
+            error("N-R scheme took more than 50 revs - breaking...")
+        end
+    end
+
+    %% Continue with PAC procedure once a soln is found
+    % Plot the converged MS solution
+    if plot_converged_solns == true
+        for k = 1:1:number_arcs
+            % Shift the starting Arg. Lat. and relative angle B with arc's epoch
+            starting_M = M0 + int_results(k).epoch;
+            starting_B = RAAN - sqrt((muS + 1)/aE^3) * int_results(k).epoch;
+    
+            % Define initial conditions and anonymous func. for integration
+            sv_k = int_results(k).x_0k;
+    
+            % 'M0' and 'RAAN' for this sim start shifted wrt their normal values
+            ode_func = @(t, y) bcir4bp_stm(t, y, ...
+                                           earth_moon_massparam = mu, ...
+                                           sun_sgp_nondim = muS, ...
+                                           sun_effect_slider = X(end), ...
+                                           moon_arglat_at_epoch = starting_M, ...
+                                           moon_inclination = inc, ...
+                                           moon_right_ascension = starting_B, ...
+                                           earth_sma_nondim = aE, ...
+                                           stm_enabled = false);
+    
+            % Return a solution structure corresponding to arc 'k'
+            ssk = ode45(ode_func, [0, int_results(k).int_time], sv_k, opts);
+    
+            % Plot the converged MS solution
+            plot3(ssk.y(1,:), ssk.y(2,:), ssk.y(3, :), 'b')
+        end
     end
 end
