@@ -72,22 +72,21 @@ TIP_commens = 2 * (3* D) * pi / Q; % Considerably reduced from 'commens_demo.m'
 T_repeat_nd = 240 * pi; % Considerably reduced from 'commens_demo.m'
 
 % Choose the commensurate orbit's proxy sample from the dataset
-orbit = l4_short_period(48);
+orbit = l4_short_period(47);
 
 %% Try to solve for the IC with the right commensurate period
-% Set the Sun's effect to full-strength for this sim and the next
-sigma = 0.0;
-
+% Set the Sun's effect to no-strength for the single-shooting process
 ode_func = @(t, y) bcir4bp_stm(t, y, ...
                                earth_moon_massparam = mu, ...
                                sun_sgp_nondim = muS, ...
-                               sun_effect_slider = sigma, ...
+                               sun_effect_slider = 0.0, ...
                                moon_arglat_at_epoch = M0, ...
                                moon_inclination = inc, ...
                                moon_right_ascension = RAAN, ...
                                earth_sma_nondim = aE, ...
                                stm_enabled = true);
 
+% Initialize the guess with a good nearby IC
 X = orbit.ic;
 
 % Dummy initialization of the F vector to get the loop going
@@ -98,13 +97,16 @@ figure(1); axis equal; hold on; grid on;
 
 % Find the CR3BP IC that is periodic at the right period
 while norm(F) > 1e-12
-    sv0 = [X; reshape(eye(6), [36, 1])];
+    sv0 = [X; reshape(eye(7), [49, 1])];
     bcir_ss = ode45(ode_func, [0, TIP_commens], sv0, opts);
 
     plot3(bcir_ss.y(1, :), bcir_ss.y(2, :), bcir_ss.y(3, :))
     
     statef = bcir_ss.y(1:6, end);
-    STMf = reshape(bcir_ss.y(7:42, end), [6 6]);
+    augmented_STMf = reshape(bcir_ss.y(7:55, end), [7 7]);
+
+    STMf = augmented_STMf(1:6, 1:6);
+    dxf_dsigma = augmented_STMf(1:6, 7);
     
     F = statef - X;
     DF = STMf - eye(6);
@@ -126,7 +128,7 @@ new_l4_spo_entry.mono = STMf;
 % New entry is at element #48 in the data structure
 l4_short_period = [l4_short_period(1:47), ...
                    new_l4_spo_entry, ...
-                   l4_short_period(48:end)];
+                   l4_short_period(49:end)];
 
 % Visualize the CR3BP's propogation of our commensurate IC and mark its initial
 % condition and its final condition
