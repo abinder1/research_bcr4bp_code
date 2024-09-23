@@ -128,3 +128,71 @@ end
 X(end) = 0;
 
 %% Construct the multiple-shooting algorithm for the homotopy process
+F_series = rand(1,3); F = 1;  % Dummy initializations of the constraint vector
+
+while norm(F) > 1e-12
+    % Propagate the orbit for the sigma value in the 'X' vector
+    for k = 1:1:number_arcs
+        % Shift the starting Arg. Lat. and relative angle B with arc's epoch
+        starting_M = M0 + int_results(k).epoch;
+        starting_B = RAAN - sqrt((muS + 1)/aE^3) * int_results(k).epoch;
+
+        % Define initial conditions and anonymous func. for integration
+        sv_k = [int_results(k).x_0k; reshape(eye(7), [49,1])];
+
+        % 'M0' and 'RAAN' for this sim start shifted wrt their normal values
+        ode_func = @(t, y) bcir4bp_stm(t, y, ...
+                                       earth_moon_massparam = mu, ...
+                                       sun_sgp_nondim = muS, ...
+                                       sun_effect_slider = X(end), ...
+                                       moon_arglat_at_epoch = starting_M, ...
+                                       moon_inclination = inc, ...
+                                       moon_right_ascension = starting_B, ...
+                                       earth_sma_nondim = aE, ...
+                                       stm_enabled = true);
+
+        % Return a solution structure corresponding to arc 'k'
+        ssk = ode45(ode_func, [0, int_results(k).int_time], sv_k, opts);
+
+        % Unpack the final state of the propagation
+        x_fk = ssk.y(1:6, end);
+
+        % Unpack the augmented state transition matrix and decompose
+        % into it's constitutent partial derivative matrices and vectors
+        augmented_STMf = reshape(ssk.y(7:55, end), [7 7]);
+
+        STMf = augmented_STMf(1:6, 1:6);
+        dxf_dsigma = augmented_STMf(1:6, 7);
+
+        % Pack up all of the results into the solution structure
+        int_results(k).x_fk = x_fk;
+        int_results(k).stm_fk = STMf;
+        int_results(k).dxf_dsigmak = dxf_dsigma;
+    end
+
+    % From the integrated information, construct 'F' and 'DF' appropriately
+    F = zeros([6 * number_arcs, 1]);
+    DF = zeros([6 * number_arcs, 6 * number_arcs + 1]);
+
+    for k = 1:1:(number_arcs)
+        index_range_a = (6*k-5):1:(6*k);
+        index_range_b = (6*k+1):1:(6*k+6);
+
+        if k < number_arcs
+            F(index_range_a) = int_results(k).x_fk - int_results(k + 1).x_0k;
+
+            % Tile the STM and an identity matrix in the right spots
+            DF(index_range_a, index_range_a) = int_results(k).stm_fk;
+            DF(index_range_a, index_range_b) = -eye(6);
+        else
+            F(index_range_a) = int_results(k).x_fk - int_results(1).x_0k;
+
+            % The periodicity condition is enforced here, wraps to #1 IC
+            DF(index_range_a, index_range_a) = int_results(k).stm_fk;
+            DF(index_range_a, 1:6) = -eye(6);
+        end
+
+        % Add in the sigma partial derivative information
+        DF(index_range_a, end) = int_results(k).dxf_dsigmak;
+    end
+end
