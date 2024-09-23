@@ -1,16 +1,30 @@
-function sv_dot = bcir4bp_stm(tau, sv, sigma, M0, inc, RAAN, mu, ae, mu_S)
+function sv_dot = bcir4bp_stm(tau, ...
+                              sv, ...
+                              sigma, ...
+                              M0, ...
+                              inc, ...
+                              RAAN, ...
+                              mu, ...
+                              ae, ...
+                              mu_S, ...
+                              stmenabled)
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 % For the Bicircular Inclined Restricted Four-Body Problem (BCIR4BP),
-% this function computes state derivatives in a format compatible with
-% MATLAB's 'ode' suite.
+% this function computes state derivatives and the state transition matrix
+% in a format compatible with MATLAB's 'ode' suite.
 %
 % Author:  Andrew Binder (2024)
 %
 % Inputs:
 %   tau = [T](1x1)<float> | The time elapsed since the simulation epoch
-%   sv = [L, L/T](6x1)<float> | The nondimensionalized position and
-%       velocity of a spacecraft flying within the model, expressed in
-%       the CR3BP-typical rotating frame
+%   sv = [L, L/T](6x1)<float> | (IFF stmenabled == false) The
+%       nondimensionalized position and velocity of a spacecraft flying within
+%       the model, expressed in the CR3BP-typical rotating frame.
+%   sv = [L, L/T](42x1)<float> | (IFF stmenabled == true) The
+%       nondimensionalized position and velocity of a spacecraft flying within
+%       the model, expressed in the CR3BP-typical rotating frame, with a
+%       linearly-indexed copy of the state transition matrix appended to the 
+%       end.
 %   sigma = [](1x1)<float> | A system configuration scalar that can
 %       tune the effects caused by the Sun's gravity acting on the
 %       model.  When sigma = 0, the model is identical to the CR3BP.
@@ -32,14 +46,26 @@ function sv_dot = bcir4bp_stm(tau, sv, sigma, M0, inc, RAAN, mu, ae, mu_S)
 %   ae = [L](1x1)<float> | The nondimensionalized semi-major axis of the
 %       Earth's orbit about the Sun.
 %   mu_S = [L^3 / T^2](1x1)<float> | The nondimensionalized SGP of the Sun.
+%   stmenabled = [](1x1)<boolean> | A flag that instructs the function
+%       to also propagate the BCIR4BP's STM (and associated
+%       configuration partials, used in homotopies)
 %
 % Outputs:
 %   sv_dot = [L/T, L/T^2](6x1)<float> | The derivatives of each state
 %       quantity with respect to tau.
+%   sv_dot = [L/T, L/T^2](42x1)<float> | The derivatives of each state
+%       quantity with respect to tau, with the tau-derivative of the STM
+%       (a matrix) linearly-indexed and appended to the end.
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
     % Pre-allocate for both speed, and to ensure that this vector has
     % the right shape
-    sv_dot = zeros([6, 1]);
+    if stmenabled == false
+        sv_dot = zeros([6, 1]);
+    else
+        sv_dot = zeros([42, 1]);
+
+        STM = reshape(sv(7:42), [6 6]);
+    end
 
     % State vector unpacking
     satellite_position = sv(1:3);
@@ -99,4 +125,29 @@ function sv_dot = bcir4bp_stm(tau, sv, sigma, M0, inc, RAAN, mu, ae, mu_S)
     % Packaging results for MATLAB
     sv_dot(1:3) = sv(4:6);
     sv_dot(4:6) = xdd_MeM;
+
+    if stmenabled == true
+        Amat = zeros(6);
+
+        K3 = [-1, 0, 0; 0, -1, 0; 0, 0, 0];
+        K4 = [0, 1, 0; -1, 0, 0; 0, 0, 0];
+
+        sun_tensor = mu_S * (3 * (DeltaS * DeltaS') - DeltaS2 * eye(3));
+        earth_tensor = (1 - mu) * (3 * (DeltaE * DeltaE') - DeltaE2 * eye(3));
+        moon_tensor = mu * (3 * (DeltaM * DeltaM') - DeltaM2 * eye(3));
+
+        % The Jacobians of each force term with respect to the s/c position
+        dAS_dpos = sigma * CB * sun_tensor * CB' * DeltaS2^(-5/2);
+        dAE_dpos = earth_tensor * DeltaE2^(-5/2);
+        dAM_dpos = moon_tensor * DeltaM2^(-5/2);
+
+        % K3 and K4 matrices come from the kinematical contr. to dynamics
+        Amat(1:3, 4:6) = eye(3);
+        Amat(4:6, 1:3) = dAS_dpos + dAE_dpos + dAM_dpos - K3;
+        Amat(4:6, 4:6) = 2 * K4;
+
+        STM_dot = Amat * STM;
+
+        sv_dot(7:end) = reshape(STM_dot, [36, 1]);
+    end
 end

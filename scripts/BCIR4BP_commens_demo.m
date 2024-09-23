@@ -104,7 +104,7 @@ IC = orbit.ic;
 % With sigma = 0, this simulates the CR3BP
 sigma = 0.0;
 
-ode_func = @(t, y) bcir4bp_stm(t, y, sigma, M0, inc, RAAN, mu, aE, muS);
+ode_func = @(t, y) bcir4bp_stm(t, y, sigma, M0, inc, RAAN, mu, aE, muS, false);
 cr3bp_ss = ode45(ode_func, [0, orbit.TIP], IC, opts);
 
 % Visualize the CR3BP's propogation of our proxy's IC
@@ -121,7 +121,7 @@ plot3(cr3bp_ss.y(1, :), cr3bp_ss.y(2, :), cr3bp_ss.y(3, :), ...
 % Set the Sun's effect to full-strength for this sim and the next
 sigma = 1.0;
 
-ode_func = @(t, y) bcir4bp_stm(t, y, sigma, M0, inc, RAAN, mu, aE, muS);
+ode_func = @(t, y) bcir4bp_stm(t, y, sigma, M0, inc, RAAN, mu, aE, muS, false);
 bcir_ss = ode45(ode_func, [0, orbit.TIP], IC, opts);
 
 % Visualize the BCIR4BP's propogation of our proxy's IC, and mark its initial
@@ -137,7 +137,7 @@ v_star = l_star / t_star; % Characteristic speed, in km/s
 
 aE = aE_dim / l_star;
 
-ode_func = @(t, y) bcir4bp_stm(t, y, sigma, M0, inc, RAAN, mu, aE, muS);
+ode_func = @(t, y) bcir4bp_stm(t, y, sigma, M0, inc, RAAN, mu, aE, muS, false);
 bcir_ss = ode45(ode_func, [0, orbit.TIP], IC, opts);
 
 % Plot the trajectory and its final condition (two traj share IC)
