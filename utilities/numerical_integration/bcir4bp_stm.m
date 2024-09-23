@@ -1,13 +1,4 @@
-function sv_dot = bcir4bp_stm(tau, ...
-                              sv, ...
-                              sigma, ...
-                              M0, ...
-                              inc, ...
-                              RAAN, ...
-                              mu, ...
-                              ae, ...
-                              mu_S, ...
-                              stmenabled)
+function sv_dot = bcir4bp_stm(tau, sv, nv_args)
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 % For the Bicircular Inclined Restricted Four-Body Problem (BCIR4BP),
 % this function computes state derivatives and the state transition matrix
@@ -23,7 +14,7 @@ function sv_dot = bcir4bp_stm(tau, ...
 %   sv = [L, L/T](42x1)<float> | (IFF stmenabled == true) The
 %       nondimensionalized position and velocity of a spacecraft flying within
 %       the model, expressed in the CR3BP-typical rotating frame, with a
-%       linearly-indexed copy of the state transition matrix appended to the 
+%       linearly-indexed copy of the state transition matrix appended to the
 %       end.
 %   sigma = [](1x1)<float> | A system configuration scalar that can
 %       tune the effects caused by the Sun's gravity acting on the
@@ -41,7 +32,7 @@ function sv_dot = bcir4bp_stm(tau, ...
 %       orbit about the Earth, as measured against the Earth-Moon-Sun
 %       barycenter-centric inertial frame
 %   mu = [](1x1)<float> | The dimensional standard gravitational
-%       parameter (SGP) of the Moon, divided by the sum of the dimensional 
+%       parameter (SGP) of the Moon, divided by the sum of the dimensional
 %       values of the Earth and the Moon's SGP.
 %   ae = [L](1x1)<float> | The nondimensionalized semi-major axis of the
 %       Earth's orbit about the Sun.
@@ -57,6 +48,30 @@ function sv_dot = bcir4bp_stm(tau, ...
 %       quantity with respect to tau, with the tau-derivative of the STM
 %       (a matrix) linearly-indexed and appended to the end.
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+    % Allow for name-value argument definitions for code clarity
+    arguments
+        tau double
+        sv double
+        nv_args.earth_moon_massparam double
+        nv_args.earth_sma_nondim double
+        nv_args.sun_sgp_nondim double
+        nv_args.sun_effect_slider double = 1.0
+        nv_args.moon_arglat_at_epoch double = 0.0
+        nv_args.moon_inclination double = 0.898; % Moons incl. is 5.145 degrees
+        nv_args.moon_right_ascension double = 0.0
+        nv_args.stm_enabled logical = true
+    end
+
+    % Unpack name-value arguments into more usable variables
+    mu = nv_args.earth_moon_massparam;
+    ae = nv_args.earth_sma_nondim;
+    mu_S = nv_args.sun_sgp_nondim;
+    sigma = nv_args.sun_effect_slider;
+    M0 = nv_args.moon_arglat_at_epoch;
+    inc = nv_args.moon_inclination;
+    RAAN = nv_args.moon_right_ascension;
+    stmenabled = nv_args.stm_enabled;
+
     % Pre-allocate for both speed, and to ensure that this vector has
     % the right shape
     if stmenabled == false
@@ -64,7 +79,7 @@ function sv_dot = bcir4bp_stm(tau, ...
     else
         sv_dot = zeros([42, 1]);
 
-        STM = reshape(sv(7:42), [6 6]);
+        STM = reshape(sv(7:42), [6, 6]);
     end
 
     % State vector unpacking
@@ -75,7 +90,7 @@ function sv_dot = bcir4bp_stm(tau, ...
 
     % Get the Moon's AoL and the RAAN - Earth MA diff. at the current tau
     M = M0 + tau;
-    B = RAAN - sqrt((mu_S+1)/ae^3) * tau;
+    B = RAAN - sqrt((mu_S + 1)/ae^3) * tau;
 
     % Construct appropriate simple-rotation direction cosine matrices...
     C3M = [cos(M), sin(M), 0; -sin(M), cos(M), 0; 0, 0, 1];
@@ -137,9 +152,9 @@ function sv_dot = bcir4bp_stm(tau, ...
         moon_tensor = mu * (3 * (DeltaM * DeltaM') - DeltaM2 * eye(3));
 
         % The Jacobians of each force term with respect to the s/c position
-        dAS_dpos = sigma * CB * sun_tensor * CB' * DeltaS2^(-5/2);
-        dAE_dpos = earth_tensor * DeltaE2^(-5/2);
-        dAM_dpos = moon_tensor * DeltaM2^(-5/2);
+        dAS_dpos = sigma * CB * sun_tensor * CB' * DeltaS2^(-5 / 2);
+        dAE_dpos = earth_tensor * DeltaE2^(-5 / 2);
+        dAM_dpos = moon_tensor * DeltaM2^(-5 / 2);
 
         % K3 and K4 matrices come from the kinematical contr. to dynamics
         Amat(1:3, 4:6) = eye(3);
