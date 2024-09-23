@@ -77,9 +77,9 @@ function sv_dot = bcir4bp_stm(tau, sv, nv_args)
     if stmenabled == false
         sv_dot = zeros([6, 1]);
     else
-        sv_dot = zeros([42, 1]);
+        sv_dot = zeros([55, 1]);
 
-        STM = reshape(sv(7:42), [6, 6]);
+        STM = reshape(sv(7:55), [7, 7]);
     end
 
     % State vector unpacking
@@ -142,7 +142,7 @@ function sv_dot = bcir4bp_stm(tau, sv, nv_args)
     sv_dot(4:6) = xdd_MeM;
 
     if stmenabled == true
-        Amat = zeros(6);
+        Amat = zeros(7);
 
         K3 = [-1, 0, 0; 0, -1, 0; 0, 0, 0];
         K4 = [0, 1, 0; -1, 0, 0; 0, 0, 0];
@@ -156,13 +156,18 @@ function sv_dot = bcir4bp_stm(tau, sv, nv_args)
         dAE_dpos = earth_tensor * DeltaE2^(-5 / 2);
         dAM_dpos = moon_tensor * DeltaM2^(-5 / 2);
 
+        % Partial of dynamics with respect to parameter sigma
+        dAS_dsigma = CB * A_S - earth_orbit_kinematical_contrib;
+
         % K3 and K4 matrices come from the kinematical contr. to dynamics
         Amat(1:3, 4:6) = eye(3);
+
         Amat(4:6, 1:3) = dAS_dpos + dAE_dpos + dAM_dpos - K3;
         Amat(4:6, 4:6) = 2 * K4;
+        Amat(4:6, 7) = dAS_dsigma;
 
         STM_dot = Amat * STM;
 
-        sv_dot(7:end) = reshape(STM_dot, [36, 1]);
+        sv_dot(7:55) = reshape(STM_dot, [49, 1]);
     end
 end
