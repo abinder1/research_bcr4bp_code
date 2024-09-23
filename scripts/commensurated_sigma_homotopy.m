@@ -69,10 +69,9 @@ load('..\saved data\generated\l4_short_period.mat')
 % M(\tau), B(\tau), and the chosen PO all repeat at this nondimensional period
 T_repeat_nd = 240 * pi; % Considerably reduced from 'commens_demo.m'
 
+%% Build out the right initial X vector via rev stacking
 % Choose the commensurate orbit sample from the dataset
 orbit = l4_short_period(48);
-
-%% Build out the right initial X vector via rev stacking
 
 % Propagate the orbit for a sigma value of zero
 ode_func = @(t, y) bcir4bp_stm(t, y, ...
@@ -87,6 +86,19 @@ ode_func = @(t, y) bcir4bp_stm(t, y, ...
 
 single_rev_sol_struct = ode45(ode_func, [0, orbit.TIP], orbit.ic, opts);
 
+figure; hold on; axis equal; grid on;
+plot3(single_rev_sol_struct.y(1,:), ...
+      single_rev_sol_struct.y(2,:), ...
+      single_rev_sol_struct.y(3,:), 'k')
+
+% Solution structure to organize MS data on each propagated arc
+int_results = struct('x_0k', {}, ...
+                     'epoch', {}, ...
+                     'int_time', {}, ...
+                     'x_fk', {}, ...
+                     'dxf_dsigmak', {}, ...
+                     'stm_fk', {});
+
 % We know that 115 revs of our SPO equal 240 * pi n.d. time units
 number_arcs = 115;
 
@@ -94,15 +106,22 @@ number_arcs = 115;
 delta_tau = T_repeat_nd / number_arcs;
 
 % Preallocate X (our design variable vector) with appropriate amt of space
-X = zeros([6 * number_arcs + 7, 1]);
+X = zeros([6 * number_arcs + 1, 1]);
 
 % Sample the singly-propagated trajectory for many 'revs'
-for k = 0:1:number_arcs
-    epoch_time = k * delta_tau;
+for k = 1:1:number_arcs
+    epoch_time = (k-1) * delta_tau;
     time_on_orbit = mod(epoch_time, orbit.TIP);
 
     % Populate X six indices at a time with samples from trajectory
-    X(6*k+1:6*k+6) = deval(single_rev_sol_struct, time_on_orbit, 1:6);
+    starting_state = deval(single_rev_sol_struct, time_on_orbit, 1:6);
+
+    % Save the epoch, initial state, and integration time on each arc
+    int_results(k).epoch = epoch_time;
+    int_results(k).x_0k = starting_state;
+    int_results(k).int_time = delta_tau;
+
+    X(6*k-5:6*k) = starting_state;
 end
 
 % Choose an initial sigma value of zero
