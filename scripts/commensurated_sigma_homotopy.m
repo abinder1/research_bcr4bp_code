@@ -137,14 +137,14 @@ clear orbit
 
 %% Construct the multiple-shooting algorithm for the homotopy process
 % How many revs through our continuation process do we want to perform?
-M_start = 670;
+M_start = 715;
 M_end = 10000;
 
 resuming = true;
 
 % Is there a pre-existing dataset we can work off of?
 if resuming == true
-    load('../saved data/generated/sigma_commensurate_homotopy_S04282.mat');
+    load('..\saved data\generated\sigma_commensurate_homotopy_S06903.mat');
 
     for k = 1:1:number_arcs    
         % Overwrite the 'X' vector with pre-existing data
