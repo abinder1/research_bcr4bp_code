@@ -137,17 +137,38 @@ clear orbit
 
 %% Construct the multiple-shooting algorithm for the homotopy process
 % How many revs through our continuation process do we want to perform?
-M_start = 1;
+M_start = 670;
 M_end = 10000;
+
+resuming = true;
+
+% Is there a pre-existing dataset we can work off of?
+if resuming == true
+    load('../saved data/generated/sigma_commensurate_homotopy_S04282.mat');
+
+    for k = 1:1:number_arcs    
+        % Overwrite the 'X' vector with pre-existing data
+        X(6*k-5:6*k) = orbit(M_start).int_results(k).x_0k;
+
+        % Seed the MS structure with proper values as well
+        int_results(k).x_0k = orbit(M_start).int_results(k).x_0k;
+    end
+
+    % Set the value of sigma properly too
+    X(end) = orbit(M_start).sigma;
+
+    % Preallocate space in the orbit structure
+    orbit(M_end).TIP = -1;
+end
 
 % Which col. of the singular value decomposition do we consider our nullspace?
 tan_vec_select = length(X);
 
 % What pseudoarclength stepsize do we want to start at?  Changes adaptively.
-ds = 1e-4;
+ds = 1e-2;
 
 % When is our N-R scheme successful?
-constraint_tolerance = 1e-10;
+constraint_tolerance = 1e-9;
 
 % Do we want to plot every converged answer we find?
 plot_converged_solns = false;
@@ -350,7 +371,7 @@ for M = M_start:M_end
         tangent_vector = V(:, tan_vec_select)';
         bifur_sense_mat = [DF; tangent_vector];
 
-        if det(bifur_sense_mat) > 0 % We choose det. positive here
+        if det(bifur_sense_mat) < 0 % We choose det. positive here
             signum = 1; % 1 for moving more negative on the negative branch
         else
             signum = -1; % -1 for moving more negative on the negative branch
@@ -390,8 +411,8 @@ for M = M_start:M_end
 
     %% Continue on with steplength adaptation and taking a PAC step
     % Nominal values for steplength adaptation, compared against actuals
-    nominal_contr_rate = 16; % Larger => bigger ds
-    nominal_first_SL = 1e-3;
+    nominal_contr_rate = 100; % Larger => bigger ds
+    nominal_first_SL = 5e-3;
     nominal_step_angle = 1e-1; % 0.1 radians is approximately 11 degrees
 
     % Add some hard-coded bounds to cap/lower bound the adaptation factor
@@ -399,8 +420,8 @@ for M = M_start:M_end
     minimum_adaptation = 0.5;
 
     % Add some hard-coded bounds to keep the PAC scheme from moving fast/slow
-    minimum_steplength = 1e-8;
-    maximum_steplength = 3e-3;
+    minimum_steplength = 1e-3;
+    maximum_steplength = 5e-2;
 
     % If the chosen member was converged on iter #1, we need to set a
     % dummy contraction rate for that iteration.  Choose one that allows
