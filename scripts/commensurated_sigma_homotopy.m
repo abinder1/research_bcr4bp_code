@@ -378,6 +378,9 @@ for M = M_start:M_end
 
     if M == 1
         orbit = orderfields(orbit);
+        
+        % Preallocate the structure for space, will be trimmed afterwards
+        orbit(M_end).epoch = -1;
     end
 
     % Break out of the PAC process if we are finished
