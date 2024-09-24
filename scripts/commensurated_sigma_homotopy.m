@@ -381,6 +381,11 @@ for M = M_start:M_end
         orbit = orderfields(orbit);
     end
 
+    % Break out of the PAC process if we are finished
+    if X(end) > 1
+        break
+    end
+
     %% Continue on with steplength adaptation and taking a PAC step
     % Nominal values for steplength adaptation, compared against actuals
     nominal_contr_rate = 16; % Larger => bigger ds
