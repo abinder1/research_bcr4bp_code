@@ -127,30 +127,35 @@ end
 % Choose an initial sigma value of zero
 X(end) = 0;
 
-%% Construct the multiple-shooting algorithm for the homotopy process
-G_norm_srz = rand(1,3); G = 1;  % Dummy initializations for the constraint vec.
+% Clear the orbit variable so that we can reuse it in our PAC scheme
+clear orbit
 
+%% Construct the multiple-shooting algorithm for the homotopy process
 % How many revs through our continuation process do we want to perform?
 M_start = 1;
-M_end = 1;
+M_end = 10000;
 
 % Which col. of the singular value decomposition do we consider our nullspace?
 tan_vec_select = length(X);
 
-% What pseudoarclength stepsize do we want to start at?  Changes adaptively
+% What pseudoarclength stepsize do we want to start at?  Changes adaptively.
 ds = 1e-4;
 
 % When is our N-R scheme successful?
-constraint_tolerance = 1e-12;
+constraint_tolerance = 1e-10;
 
 % Do we want to plot every converged answer we find?
-plot_converged_solns = true;
+plot_converged_solns = false;
 
 % Do we want to plot every trajectory propagated by the MS scheme?
-plot_intermediates = true;
+plot_intermediates = false;
 
 for M = M_start:M_end
     q = 1;  % How many revs thru the N-R scheme have we performed?
+
+    % Dummy initializations for the constraint vec. to start the N-R process
+    G_norm_srz = rand(1,3);
+    G = 1;  
 
     while norm(G) > constraint_tolerance
         % Propagate the orbit for the sigma value in the 'X' vector
@@ -174,7 +179,7 @@ for M = M_start:M_end
                                            stm_enabled = true);
     
             % Return a solution structure corresponding to arc 'k'
-            ssk = ode45(ode_func, [0, int_results(k).int_time], sv_k, opts);
+            ssk = ode89(ode_func, [0, int_results(k).int_time], sv_k, opts);
 
             if plot_intermediates == true
                 % Plot the unconverged MS arcs
@@ -305,7 +310,7 @@ for M = M_start:M_end
         end
     end
 
-    %% Continue with PAC procedure once a soln is found
+    %% Continue with PAC procedure, first doing some preliminaries
     % Plot the converged MS solution
     if plot_converged_solns == true
         for k = 1:1:number_arcs
@@ -333,5 +338,83 @@ for M = M_start:M_end
             % Plot the converged MS solution
             plot3(ssk.y(1,:), ssk.y(2,:), ssk.y(3, :), 'b')
         end
+    end
+
+    % Now that we've converged, we need to check/set the nullspace direction
+    if M == M_start
+        tangent_vector = V(:, tan_vec_select)';
+        bifur_sense_mat = [DF; tangent_vector];
+
+        if det(bifur_sense_mat) > 0  % We choose det. positive here
+            signum = 1;  % 1 for moving more negative on the negative branch
+        else
+            signum = -1; % -1 for moving more negative on the negative branch
+        end
+    elseif M > M_start
+        % This condition (tangents opposite) occurs at a bifurcation
+        % and switches the PAC method's traversal direction
+        if dot(step_tangent_vector, signum * tangent_vector) < 0 
+            signum = -signum;
+        end
+    end
+
+    % Latch a copy of the oriented tangent vector
+    step_tangent_vector = signum * tangent_vector;
+
+    % Write converged orbit to organizing structure
+    orbit(M).int_results = int_results;
+    orbit(M).number_arcs = number_arcs;
+    orbit(M).corrector = 'Fixed-time, sigma-augmented corrector with full-rev patch point continuity only';
+    orbit(M).sigma = X(end);
+    orbit(M).epoch = 0;
+    orbit(M).F_norm = norm(G);
+    orbit(M).TIP = T_repeat_nd;
+
+    if M == 1
+        orbit = orderfields(orbit);
+    end
+
+    %% Continue on with steplength adaptation and taking a PAC step
+    % Nominal values for steplength adaptation, compared against actuals
+    nominal_contr_rate = 16;  % Larger => bigger ds
+    nominal_first_SL = 1e-3;
+    nominal_step_angle = 1e-1; % 0.1 radians is approximately 11 degrees
+
+    % Add some hard-coded bounds to cap/lower bound the adaptation factor
+    maximum_adaptation = 2;
+    minimum_adaptation = 0.5;
+
+    % Add some hard-coded bounds to keep the PAC scheme from moving fast/slow
+    minimum_steplength = 1e-8;
+    maximum_steplength = 3e-3;
+
+    % If the chosen member was converged on iter #1, we need to set a
+    % dummy contraction rate for that iteration.  Choose one that allows
+    % for the other convergence metrics to be applied instead.
+    if ~exist("contr_rate", "var")
+        contr_rate = first_SL / nominal_first_SL * nominal_contr_rate;
+    end
+    
+    % When a bifurcation occurs, the step angle is closer to pi
+    step_angle = min(step_angle, pi - step_angle);
+
+    % Three factors can be used to adapt our steplength
+    adapt_metrics = [sqrt(contr_rate/nominal_contr_rate), ...
+                     sqrt(first_SL/nominal_first_SL), ...
+                     step_angle/nominal_step_angle];
+
+    % The most limiting of the three is chosen as our actual adaptation
+    adapt_factor = max(min(max(adapt_metrics), maximum_adaptation), minimum_adaptation);
+    ds = min(max(ds / adapt_factor, minimum_steplength), maximum_steplength);
+
+    % Print converged sigma value and arclength for logging
+    fprintf("sigma = %5.4e | ds = %5.4e | M = %d | q = %d\n", X(end), ds, M, q)
+    
+    last_X = X;
+    X = X + ds * step_tangent_vector';
+
+    % Deal the modified initial conditions back out to the struct
+    for k = 1:1:number_arcs
+        int_results(k).x_0k = X(6*k-5:6*k);
     end
 end
