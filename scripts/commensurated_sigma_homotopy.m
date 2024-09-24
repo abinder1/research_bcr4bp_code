@@ -296,8 +296,7 @@ for M = M_start:M_end
 
         % Check that G is changing (e.g. dropping monotonically)
         % This is a moving average of the constraint vector's norm
-        G_norm_srz(1) = [];
-        G_norm_srz = [G_norm_srz, norm(G)];
+        G_norm_srz = [G_norm_srz(2:3), norm(G)];
         average_change = mean(abs(diff(G_norm_srz))) / norm(G);
 
         if average_change < 1e-4
