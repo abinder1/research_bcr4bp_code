@@ -264,12 +264,6 @@ for M = M_start:M_end
         % Diagnostic output
         fprintf("Norm of constraint vector:  %1.4e\n", norm(G))
 
-        % Prematurely break out of the N-R algorithm if constraint norm
-        % is satisfied by our previous step (avoiding applying another dX)
-        if norm(G) < constraint_tolerance
-            break
-        end
-
         % Solve this system the 'best' way possible
         [delta_x, step_residual] = robust_delta_X_DG_G(DG, G);
 
@@ -290,6 +284,12 @@ for M = M_start:M_end
 
         % What angle does current nullspace make with continuation nullspace?
         step_angle = acos(dot_prod);
+
+        % Prematurely break out of the N-R algorithm if constraint norm
+        % is satisfied by our previous step (avoiding applying another dX)
+        if norm(G) < constraint_tolerance
+            break
+        end
 
         % Modify our design variables
         X = X - delta_x;
