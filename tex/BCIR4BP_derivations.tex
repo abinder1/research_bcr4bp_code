@@ -674,7 +674,9 @@
 	\end{split}
 	\end{align}
 	
-	Missing is the final composed expression
+	\begin{equation}
+		\pd{\ddot{\mathbf{x}}_{\mathcal{M}\text{, EM}}}{M_0} = \sigma \left[ C_B  \left[\pd{\mathbf{a}_{\odot}}{ \mathbf{x}_{\mathcal{M}\text{, EM}} }\right] C_B^T \left[ \pd{C_B}{M_0} \right]^T \mathbf{x}_{\mathcal{M}\text{, EM}} + \mu_\odot \left(\frac{1-\gamma}{a_E^3}\right) \pd{K_\alpha}{M_0} \cdot \boldsymbol{\varepsilon} \right]
+	\end{equation}
 	
 	\hrule \vspace{1em}
 	
@@ -712,7 +714,9 @@
 	\end{split}
 	\end{align}
 	
-	Missing is the final composed expression
+	\begin{equation}
+		\pd{\ddot{\mathbf{x}}_{\mathcal{M}\text{, EM}}}{\Omega} = \sigma \left[ C_B \left[\pd{\mathbf{a}_{\odot}}{ \mathbf{x}_{\mathcal{M}\text{, EM}} }\right] C_B^T \left[ \pd{C_B}{\Omega} \right]^T \mathbf{x}_{\mathcal{M}\text{, EM}} + \mu_\odot \left(\frac{1-\gamma}{a_E^3}\right) \pd{K_\alpha}{\Omega} \cdot \boldsymbol{\varepsilon} \right]
+	\end{equation}
 	
 	\hrule \vspace{1em}
 	
@@ -756,6 +760,55 @@
 	\end{split}
 	\end{align}
 	
-	Missing is the final composed expression
+	\begin{equation}
+		\pd{\ddot{\mathbf{x}}_{\mathcal{M}\text{, EM}}}{i} = \sigma \left[ C_B \left[\pd{\mathbf{a}_{\odot}}{ \mathbf{x}_{\mathcal{M}\text{, EM}} }\right] C_B^T \left[ \pd{C_B}{i} \right]^T \mathbf{x}_{\mathcal{M}\text{, EM}} + \mu_\odot \left(\frac{1-\gamma}{a_E^3}\right) \pd{K_\alpha}{i} \boldsymbol{\varepsilon} \right]
+	\end{equation}
+	
+	\hrule \vspace{1em}
+	
+	Common to each of the three final expressions is a similarity transform of the Sun gravity's partial derivative with respect to the satellite's position.  If we define $\mathbf{G}$ to be this similarity transform:
+	
+	\begin{equation*}
+		\mathbf{G} = C_B \left[\pd{\mathbf{a}_{\odot}}{ \mathbf{x}_{\mathcal{M}\text{, EM}} }\right] C_B^T
+	\end{equation*}
+	
+	we can represent each partial derivative very succinctly:
+	
+	
+	\begin{equation}
+		\pd{\ddot{\mathbf{x}}_{\mathcal{M}\text{, EM}}}{M_0} = \sigma \left[ \mathbf{G} \left[ \pd{C_B}{M_0} \right]^T \mathbf{x}_{\mathcal{M}\text{, EM}} + \mu_\odot \left(\frac{1-\gamma}{a_E^3}\right) \pd{K_\alpha}{M_0} \cdot \boldsymbol{\varepsilon} \right]
+	\end{equation}
+	
+	\begin{equation}
+		\pd{\ddot{\mathbf{x}}_{\mathcal{M}\text{, EM}}}{\Omega} = \sigma \left[ \mathbf{G} \left[ \pd{C_B}{\Omega} \right]^T \mathbf{x}_{\mathcal{M}\text{, EM}} + \mu_\odot \left(\frac{1-\gamma}{a_E^3}\right) \pd{K_\alpha}{\Omega} \cdot \boldsymbol{\varepsilon} \right]
+	\end{equation}
+	
+	\begin{equation}
+		\pd{\ddot{\mathbf{x}}_{\mathcal{M}\text{, EM}}}{i} = \sigma \left[ \mathbf{G} \left[ \pd{C_B}{i} \right]^T \mathbf{x}_{\mathcal{M}\text{, EM}} + \mu_\odot \left(\frac{1-\gamma}{a_E^3}\right) \pd{K_\alpha}{i} \boldsymbol{\varepsilon} \right]
+	\end{equation}
+	
+	which depend on the following partial derivatives of $C_B$:
+	
+	\begin{equation*}
+		\pd{C_B}{M_0} = K_1(M) C_1(i) C_3(B)
+	\end{equation*}
+	\begin{equation*}
+		\pd{C_B}{\Omega} = C_3(M) C_1(i) K_1(B)
+	\end{equation*}
+	\begin{equation*}
+		\pd{C_B}{i} = C_3(M) \pd{C_1(i)}{i} C_3(B)
+	\end{equation*}
+	
+	and the following partial derivatives of $K_\alpha$:
+	
+	\begin{equation*}
+		\pd{K_\alpha}{M_0} = K_1(M) C_1(i) K_2(B)
+	\end{equation*}
+	\begin{equation*}
+		\pd{K_\alpha}{\Omega} = -K_1(M) C_1(i) K_1^T(B)
+	\end{equation*}
+	\begin{equation*}
+		\pd{K_\alpha}{i} = K_1(M) \pd{C_1(i)}{i} K_2(B)
+	\end{equation*}
 	
 \end{document}
