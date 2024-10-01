@@ -2,7 +2,13 @@ function sv_dot = bcir4bp_angles_stm(tau, sv, nv_args)
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 % For the Bicircular Inclined Restricted Four-Body Problem (BCIR4BP),
 % this function computes state derivatives and the state transition matrix
-% in a format compatible with MATLAB's 'ode' suite.
+% in a format compatible with MATLAB's 'ode' suite.  Alongside the
+% traditional STM, the partial derivatives of how the final state
+% changes with the following four model parameters are also propagated:
+%   1) The Sun's strength, \sigma
+%   2) The argument of latitude of the Moon at epoch, M_0
+%   3) The inclination of the Moon's orbit wrt the ecliptic, i
+%   4) The RAAN of the Moon's orbit, \Omega
 %
 % Author:  Andrew Binder (2024)
 %
@@ -11,11 +17,11 @@ function sv_dot = bcir4bp_angles_stm(tau, sv, nv_args)
 %   sv = [L, L/T](6x1)<float> | (IFF stmenabled == false) The
 %       nondimensionalized position and velocity of a spacecraft flying within
 %       the model, expressed in the CR3BP-typical rotating frame.
-%   sv = [L, L/T](42x1)<float> | (IFF stmenabled == true) The
+%   sv = [L, L/T](106x1)<float> | (IFF stmenabled == true) The
 %       nondimensionalized position and velocity of a spacecraft flying within
 %       the model, expressed in the CR3BP-typical rotating frame, with a
-%       linearly-indexed copy of the state transition matrix appended to the
-%       end.
+%       linearly-indexed copy of the augmented state transition matrix
+%       appended to the end.
 %   sigma = [](1x1)<float> | A system configuration scalar that can
 %       tune the effects caused by the Sun's gravity acting on the
 %       model.  When sigma = 0, the model is identical to the CR3BP.
@@ -44,9 +50,9 @@ function sv_dot = bcir4bp_angles_stm(tau, sv, nv_args)
 % Outputs:
 %   sv_dot = [L/T, L/T^2](6x1)<float> | The derivatives of each state
 %       quantity with respect to tau.
-%   sv_dot = [L/T, L/T^2](42x1)<float> | The derivatives of each state
-%       quantity with respect to tau, with the tau-derivative of the STM
-%       (a matrix) linearly-indexed and appended to the end.
+%   sv_dot = [L/T, L/T^2](106x1)<float> | The derivatives of each state
+%       quantity with respect to tau, with the tau-derivative of the augmented
+%       STM (a matrix) linearly-indexed and appended to the end.
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
     % Allow for name-value argument definitions for code clarity
     arguments
@@ -62,7 +68,7 @@ function sv_dot = bcir4bp_angles_stm(tau, sv, nv_args)
         nv_args.stm_enabled logical = true
     end
 
-    % Unpack name-value arguments into more usable variables
+    % Unpack name-value arguments into more usable local variables
     mu = nv_args.earth_moon_massparam;
     ae = nv_args.earth_sma_nondim;
     mu_S = nv_args.sun_sgp_nondim;
