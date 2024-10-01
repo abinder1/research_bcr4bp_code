@@ -1,8 +1,14 @@
-function sv_dot = bcir4bp_stm(tau, sv, nv_args)
+function sv_dot = bcir4bp_angles_stm(tau, sv, nv_args)
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 % For the Bicircular Inclined Restricted Four-Body Problem (BCIR4BP),
 % this function computes state derivatives and the state transition matrix
-% in a format compatible with MATLAB's 'ode' suite.
+% in a format compatible with MATLAB's 'ode' suite.  Alongside the
+% traditional STM, the partial derivatives of how the final state
+% changes with the following four model parameters are also propagated:
+%   1) The Sun's strength, \sigma
+%   2) The argument of latitude of the Moon at epoch, M_0
+%   3) The inclination of the Moon's orbit wrt the ecliptic, i
+%   4) The RAAN of the Moon's orbit, \Omega
 %
 % Author:  Andrew Binder (2024)
 %
@@ -11,11 +17,11 @@ function sv_dot = bcir4bp_stm(tau, sv, nv_args)
 %   sv = [L, L/T](6x1)<float> | (IFF stmenabled == false) The
 %       nondimensionalized position and velocity of a spacecraft flying within
 %       the model, expressed in the CR3BP-typical rotating frame.
-%   sv = [L, L/T](42x1)<float> | (IFF stmenabled == true) The
+%   sv = [L, L/T](106x1)<float> | (IFF stmenabled == true) The
 %       nondimensionalized position and velocity of a spacecraft flying within
 %       the model, expressed in the CR3BP-typical rotating frame, with a
-%       linearly-indexed copy of the state transition matrix appended to the
-%       end.
+%       linearly-indexed copy of the augmented state transition matrix
+%       appended to the end.
 %   sigma = [](1x1)<float> | A system configuration scalar that can
 %       tune the effects caused by the Sun's gravity acting on the
 %       model.  When sigma = 0, the model is identical to the CR3BP.
@@ -44,9 +50,9 @@ function sv_dot = bcir4bp_stm(tau, sv, nv_args)
 % Outputs:
 %   sv_dot = [L/T, L/T^2](6x1)<float> | The derivatives of each state
 %       quantity with respect to tau.
-%   sv_dot = [L/T, L/T^2](42x1)<float> | The derivatives of each state
-%       quantity with respect to tau, with the tau-derivative of the STM
-%       (a matrix) linearly-indexed and appended to the end.
+%   sv_dot = [L/T, L/T^2](106x1)<float> | The derivatives of each state
+%       quantity with respect to tau, with the tau-derivative of the augmented
+%       STM (a matrix) linearly-indexed and appended to the end.
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
     % Allow for name-value argument definitions for code clarity
     arguments
@@ -62,7 +68,7 @@ function sv_dot = bcir4bp_stm(tau, sv, nv_args)
         nv_args.stm_enabled logical = true
     end
 
-    % Unpack name-value arguments into more usable variables
+    % Unpack name-value arguments into more usable local variables
     mu = nv_args.earth_moon_massparam;
     ae = nv_args.earth_sma_nondim;
     mu_S = nv_args.sun_sgp_nondim;
@@ -77,9 +83,9 @@ function sv_dot = bcir4bp_stm(tau, sv, nv_args)
     if stmenabled == false
         sv_dot = zeros([6, 1]);
     else
-        sv_dot = zeros([55, 1]);
+        sv_dot = zeros([106, 1]);
 
-        STM = reshape(sv(7:55), [7, 7]);
+        STM = reshape(sv(7:106), [10, 10]);
     end
 
     % State vector unpacking
@@ -142,7 +148,7 @@ function sv_dot = bcir4bp_stm(tau, sv, nv_args)
     sv_dot(4:6) = xdd_MeM;
 
     if stmenabled == true
-        Amat = zeros(7);
+        Amat = zeros(10);
 
         K3 = [-1, 0, 0; 0, -1, 0; 0, 0, 0];
         K4 = [0, 1, 0; -1, 0, 0; 0, 0, 0];
@@ -159,6 +165,22 @@ function sv_dot = bcir4bp_stm(tau, sv, nv_args)
         % Partial of dynamics with respect to parameter sigma
         dAS_dsigma = CB * A_S - earth_orbit_kinematical_contrib;
 
+        % Similarity transform of dAS_dpos
+        G = CB * dAS_dpos * CB';
+
+        K1M = [-sin(M), cos(M), 0; -cos(M), -sin(M), 0; 0, 0, 0];
+        K1B = [-sin(B), cos(B), 0; -cos(B), -sin(B), 0; 0, 0, 0];
+        K3B = [sin(B), -cos(B), 0; cos(B), sin(B), 0; 0, 0, 0];
+        dC1I_dI = [0, 0, 0; 0, -sin(inc), cos(inc); 0, -cos(inc), -sin(inc)];
+
+        dCB_dM0 = K1M * C1I * C3B;
+        dCB_dOm = C3M * C1I * K1B;
+        dCB_dIn = C3M * dC1I_dI * C3B;
+
+        dKalfa_dM0 = K1M * C1I * K2B;
+        dKalfa_dOm = C3M * C1I * K3B;
+        dKalfa_dIn = C3M * dC1I_dI * K2B;
+
         % K3 and K4 matrices come from the kinematical contr. to dynamics
         Amat(1:3, 4:6) = eye(3);
 
@@ -166,8 +188,20 @@ function sv_dot = bcir4bp_stm(tau, sv, nv_args)
         Amat(4:6, 4:6) = 2 * K4;
         Amat(4:6, 7) = dAS_dsigma;
 
+        Amat(4:6, 8) = sigma * (dCB_dM0 * A_S ...
+                            + G * dCB_dM0' * satellite_position ...
+                            - mu_S * (OmG / ae^2) * dKalfa_dM0 * [1; 0; 0]);
+
+        Amat(4:6, 9) = sigma * (dCB_dOm * A_S ...
+                            + G * dCB_dOm' * satellite_position ...
+                            - mu_S * (OmG / ae^2) * dKalfa_dOm * [1; 0; 0]);
+
+        Amat(4:6, 10) = sigma * (dCB_dIn * A_S ...
+                            + G * dCB_dIn' * satellite_position ...
+                            - mu_S * (OmG / ae^2) * dKalfa_dIn * [1; 0; 0]);
+
         STM_dot = Amat * STM;
 
-        sv_dot(7:55) = reshape(STM_dot, [49, 1]);
+        sv_dot(7:106) = reshape(STM_dot, [100, 1]);
     end
 end
