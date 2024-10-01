@@ -1,4 +1,4 @@
-function sv_dot = bcir4bp_angles_stm(tau, sv, nv_args)
+function sv_dot = bcir4bp_stm(tau, sv, nv_args)
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 % For the Bicircular Inclined Restricted Four-Body Problem (BCIR4BP),
 % this function computes state derivatives and the state transition matrix

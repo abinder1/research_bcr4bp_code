@@ -60,83 +60,42 @@ opts = odeset("RelTol", 1e-12, "AbsTol", 1e-12);
 %% Propagate a sample reference trajectory in the BCIR4BP
 
 % Load in L4 SPOs, our sample is entry #48
-load('..\saved data\generated\l4_short_period.mat')
+load('..\saved data\generated\commensurate_homotopy_sigma.mat')
 
-% M(\tau), B(\tau), and the chosen PO all repeat at this nondimensional period
-T_repeat_nd = 240 * pi; % Considerably reduced from 'commens_demo.m'
+% We only want the \sigma = 1.0 sample, with some added information
+orbit = orbit(end);
+orbit.M_0 = 0;
+orbit.RAAN = 0;
 
-%% Build out the right initial X vector via rev stacking
-% Choose the commensurate orbit sample from the dataset (#48 is our
-% newly-constructed SPO member)
-orbit = l4_short_period(48);
+%% Construct appropriate int_results structs and begin the MS algorithm
 
-% Propagate the orbit for a sigma value of zero
-ode_func = @(t, y) bcir4bp_stm(t, y, ...
-                               earth_moon_massparam = mu, ...
-                               sun_sgp_nondim = muS, ...
-                               sun_effect_slider = 0.0, ...
-                               moon_arglat_at_epoch = M0, ...
-                               moon_inclination = inc, ...
-                               moon_right_ascension = RAAN, ...
-                               earth_sma_nondim = aE, ...
-                               stm_enabled = false);
+% Solution structure to organize MS data on each propagated arc, without
+% sigma derivative information
+int_results = rmfield(orbit.int_results, 'dxf_dsigmak');
 
-single_rev_sol_struct = ode45(ode_func, [0, orbit.TIP], orbit.ic, opts);
-
-% Plot the original orbit for later comparison with PAC results
-figure(1);
-hold on;
-axis equal;
-grid on;
-plot3(single_rev_sol_struct.y(1, :), ...
-    single_rev_sol_struct.y(2, :), ...
-    single_rev_sol_struct.y(3, :), 'k')
-
-% Solution structure to organize MS data on each propagated arc
-int_results = struct('x_0k', {}, ...
-                     'epoch', {}, ...
-                     'int_time', {}, ...
-                     'x_fk', {}, ...
-                     'dxf_dsigmak', {}, ...
-                     'stm_fk', {});
+% Pre-allocate space for the new RAAN derivatives
+int_results(end).dxf_dRAANk = zeros([6, 1]);
 
 % We know that 115 revs of our SPO equal 240 * pi n.d. time units
-number_arcs = 115; % This can however be anything (as long as M-S converges)
-
-% How much elapsed time occurs on each arc?
-delta_tau = T_repeat_nd / number_arcs;
+number_arcs = length(int_results); % This can however be anything (as long as M-S converges)
 
 % Preallocate X (our design variable vector) with appropriate amt. of space
 X = zeros([6 * number_arcs + 1, 1]);
 
-% Sample the singly-propagated trajectory for many 'revs'
+% Populate the 'X' vector with the pre-existing orbit
 for k = 1:1:number_arcs
-    epoch_time = (k - 1) * delta_tau;
-    time_on_orbit = mod(epoch_time, orbit.TIP);
-
-    % Populate X six indices at a time with samples from trajectory
-    starting_state = deval(single_rev_sol_struct, time_on_orbit, 1:6);
-
-    % Save the epoch, initial state, and integration time on each arc
-    int_results(k).epoch = epoch_time;
-    int_results(k).x_0k = starting_state;
-    int_results(k).int_time = delta_tau;
-
-    X(6*k-5:6*k) = starting_state;
+    X(6*k-5:6*k) = int_results(k).x_0k;
 end
 
-% Choose an initial sigma value of zero
-X(end) = 0;
-
-% Clear the orbit variable so that we can reuse it in our PAC scheme
-clear orbit
+% Choose an initial RAAN value of zero
+X(end) = orbit.RAAN;
 
 %% Construct the multiple-shooting algorithm for the homotopy process
 % How many revs through our continuation process do we want to perform?
-M_start = 715;
+M_start = 1;
 M_end = 10000;
 
-resuming = true;
+resuming = false;
 
 % Is there a pre-existing dataset we can work off of?
 if resuming == true
@@ -161,10 +120,10 @@ end
 tan_vec_select = length(X);
 
 % What pseudoarclength stepsize do we want to start at?  Changes adaptively.
-ds = 1e-2;
+ds = 0.05;
 
 % When is our N-R scheme successful?
-constraint_tolerance = 1e-9;
+constraint_tolerance = 1e-6;
 
 % Do we want to plot every converged answer we find?
 plot_converged_solns = false;
@@ -180,11 +139,11 @@ for M = M_start:M_end
     G = 1;
 
     while norm(G) > constraint_tolerance
-        % Propagate the orbit for the sigma value in the 'X' vector
+        % Propagate the orbit for the RAAN value in the 'X' vector
         parfor k = 1:number_arcs
             % Shift the starting ArgLat. and relative angle B with arc's epoch
             starting_M = M0 + int_results(k).epoch;
-            starting_B = RAAN - sqrt((muS + 1)/aE^3) * int_results(k).epoch;
+            starting_B = X(end) - sqrt((muS + 1)/aE^3) * int_results(k).epoch;
 
             % Define initial conditions and anonymous func. for integration
             sv_k = [int_results(k).x_0k; reshape(eye(10), [100, 1])];
@@ -193,7 +152,7 @@ for M = M_start:M_end
             ode_func = @(t, y) bcir4bp_stm(t, y, ...
                                         earth_moon_massparam = mu, ...
                                         sun_sgp_nondim = muS, ...
-                                        sun_effect_slider = X(end), ...
+                                        sun_effect_slider = 1.0, ...
                                         moon_arglat_at_epoch = starting_M, ...
                                         moon_inclination = inc, ...
                                         moon_right_ascension = starting_B, ...
@@ -216,12 +175,12 @@ for M = M_start:M_end
             augmented_STMf = reshape(ssk.y(7:106, end), [10, 10]);
 
             STMf = augmented_STMf(1:6, 1:6);
-            dxf_dsigma = augmented_STMf(1:6, 7);
+            dxf_dRAAN = augmented_STMf(1:6, 9);
 
             % Pack up all of the results into the solution structure
             int_results(k).x_fk = x_fk;
             int_results(k).stm_fk = STMf;
-            int_results(k).dxf_dsigmak = dxf_dsigma;
+            int_results(k).dxf_dRAANk = dxf_dRAAN;
         end
 
         % From the integrated information, construct 'F' and 'DF' appropriately
@@ -246,8 +205,8 @@ for M = M_start:M_end
                 DF(index_range_a, 1:6) = -eye(6);
             end
 
-            % Add in the sigma partial derivative information
-            DF(index_range_a, end) = int_results(k).dxf_dsigmak;
+            % Add in the RAAN partial derivative information
+            DF(index_range_a, end) = int_results(k).dxf_dRAANk;
         end
 
         % Find the singular values and nullspace vector for pseudoarclength
@@ -338,7 +297,7 @@ for M = M_start:M_end
         for k = 1:1:number_arcs
             % Shift the starting ArgLat. and relative angle B with arc's epoch
             starting_M = M0 + int_results(k).epoch;
-            starting_B = RAAN - sqrt((muS + 1)/aE^3) * int_results(k).epoch;
+            starting_B = X(end) - sqrt((muS + 1)/aE^3) * int_results(k).epoch;
 
             % Define initial conditions and anonymous func. for integration
             sv_k = int_results(k).x_0k;
@@ -347,7 +306,7 @@ for M = M_start:M_end
             ode_func = @(t, y) bcir4bp_stm(t, y, ...
                                         earth_moon_massparam = mu, ...
                                         sun_sgp_nondim = muS, ...
-                                        sun_effect_slider = X(end), ...
+                                        sun_effect_slider = 1.0, ...
                                         moon_arglat_at_epoch = starting_M, ...
                                         moon_inclination = inc, ...
                                         moon_right_ascension = starting_B, ...
@@ -386,12 +345,14 @@ for M = M_start:M_end
     % Write converged orbit to organizing structure
     orbit(M).int_results = int_results;
     orbit(M).number_arcs = number_arcs;
-    orbit(M).corrector = strcat('Fixed-time, sigma-augmented corrector ', ...
+    orbit(M).corrector = strcat('Fixed-time, RAAN-augmented corrector ', ...
                                 'with full-rev patch point continuity only');
-    orbit(M).sigma = X(end);
+    orbit(M).RAAN = X(end);
+    orbit(M).M_0 = 0;
     orbit(M).epoch = 0;
+    orbit(M).sigma = 1.0;
     orbit(M).F_norm = norm(G);
-    orbit(M).TIP = T_repeat_nd;
+    orbit(M).TIP = orbit(1).TIP;
 
     if M == 1
         orbit = orderfields(orbit);
@@ -401,13 +362,13 @@ for M = M_start:M_end
     end
 
     % Break out of the PAC process if we are finished
-    if X(end) > 1
+    if X(end) > 2 * pi
         break
     end
 
     %% Continue on with steplength adaptation and taking a PAC step
     % Nominal values for steplength adaptation, compared against actuals
-    nominal_contr_rate = 100; % Larger => bigger ds
+    nominal_contr_rate = 1; % Larger => bigger ds
     nominal_first_SL = 5e-3;
     nominal_step_angle = 1e-1; % 0.1 radians is approximately 11 degrees
 
@@ -417,7 +378,7 @@ for M = M_start:M_end
 
     % Add some hard-coded bounds to keep the PAC scheme from moving fast/slow
     minimum_steplength = 1e-3;
-    maximum_steplength = 5e-2;
+    maximum_steplength = 0.5;
 
     % If the chosen member was converged on iter #1, we need to set a
     % dummy contraction rate for that iteration.  Choose one that allows
@@ -442,8 +403,8 @@ for M = M_start:M_end
 
     ds = min(max(ds/adapt_factor, minimum_steplength), maximum_steplength);
 
-    % Print converged sigma value and arclength for logging
-    fprintf("sigma = %5.4e | ds = %5.4e | M = %d | q = %d\n", X(end), ds, M, q)
+    % Print converged RAAN value and arclength for logging
+    fprintf("RAAN = %5.4e | ds = %5.4e | M = %d | q = %d\n", X(end), ds, M, q)
 
     last_X = X;
     X = X + ds * step_tangent_vector';
