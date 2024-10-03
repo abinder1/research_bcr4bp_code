@@ -94,7 +94,7 @@ M_end = 100000;
 ds = 1e-4;
 
 % When is our N-R scheme successful?
-constraint_tolerance = 1e-12;
+constraint_tolerance = 1e-10;
 
 % Do we want to plot every converged answer we find?
 plot_converged_solns = false;
@@ -250,7 +250,7 @@ for M = M_start:M_end
 
     %% Continue on with steplength adaptation and taking a PAC step
     % Nominal values for steplength adaptation, compared against actuals
-    nominal_contr_rate = 1; % Larger => bigger ds
+    nominal_contr_rate = 1.3; % Larger => bigger ds
     nominal_first_SL = 2e-2;
     nominal_step_angle = 1e-1; % 0.1 radians is approximately 11 degrees
 
@@ -259,7 +259,7 @@ for M = M_start:M_end
     minimum_adaptation = 0.5;
 
     % Add some hard-coded bounds to keep the PAC scheme from moving fast/slow
-    minimum_steplength = 1e-4;
+    minimum_steplength = 1e-3;
     maximum_steplength = 0.1;
 
     % If the chosen member was converged on iter #1, we need to set a
