@@ -16,6 +16,9 @@ clear;
 clc;
 close('all');
 
+% Start a script timer
+tic
+
 addpath(genpath('..\utilities')); % Add folder and subfolders
 addpath(genpath('..\saved data')); % Add folder and subfolders
 
@@ -313,9 +316,17 @@ for M = M_start:M_end
 
     ds = min(max(ds/adapt_factor, minimum_steplength), maximum_steplength);
 
-    % Print converged RAAN value and arclength for logging
-    fprintf("RAAN = %5.4e | ds = %5.4e | M = %d | q = %d\n", RAAN_target, ds, M, q)
-
+    if M > M_start
+        % How long has the script been running?
+        elapsed_time = toc;
+    
+        % How much longer will the script run (predicted)?
+        time_left = elapsed_time * (2 * pi / RAAN_target - 1);
+            
+        % Print converged RAAN value and arclength for logging
+        fprintf("RAAN = %5.4e | ds = %5.4e | M = %d | q = %d | Elapsed: %.0f seconds | Remaining: %.0f seconds\n", RAAN_target, ds, M, q, elapsed_time, time_left)
+    end
+    
     % Update the RAAN target for the next step
     RAAN_target = RAAN_target + ds;
 end
