@@ -223,6 +223,34 @@ for M = M_start:M_end
             error("N-R scheme took more than 50 revs - breaking...")
         end
     end
+    
+    if plot_converged_solns == true
+        for k = 1:1:number_arcs
+            % Shift the starting ArgLat. and relative angle B with arc's epoch
+            starting_M = M0 + int_results(k).epoch;
+            starting_B = RAAN_target - sqrt((muS + 1)/aE^3) * int_results(k).epoch;
+    
+            % Define initial conditions and anonymous func. for integration
+            sv_k = int_results(k).x_0k;
+    
+            % 'M0' and 'RAAN' for this sim start shifted wrt set values above
+            ode_func = @(t, y) bcir4bp_stm(t, y, ...
+                                            earth_moon_massparam = mu, ...
+                                            sun_sgp_nondim = muS, ...
+                                            sun_effect_slider = 1.0, ...
+                                            moon_arglat_at_epoch = starting_M, ...
+                                            moon_inclination = inc, ...
+                                            moon_right_ascension = starting_B, ...
+                                            earth_sma_nondim = aE, ...
+                                            stm_enabled = false);
+    
+            % Return a solution structure corresponding to arc 'k'
+            ssk = ode45(ode_func, [0, int_results(k).int_time], sv_k, opts);
+    
+            % Plot the converged MS solution
+            plot3(ssk.y(1, :), ssk.y(2, :), ssk.y(3, :), 'b')
+        end
+    end
 
     % Write converged orbit to organizing structure
     orbit(M).int_results = int_results;
