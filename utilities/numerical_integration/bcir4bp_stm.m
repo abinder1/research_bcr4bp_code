@@ -1,4 +1,4 @@
-function sv_dot = bcir4bp_stm(tau, sv, nv_args)
+function sv_dot = bcir4bp_stm(delta_tau, sv, sim_config)
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 % For the Bicircular Inclined Restricted Four-Body Problem (BCIR4BP),
 % this function computes state derivatives and the state transition matrix
@@ -6,202 +6,98 @@ function sv_dot = bcir4bp_stm(tau, sv, nv_args)
 % traditional STM, the partial derivatives of how the final state
 % changes with the following four model parameters are also propagated:
 %   1) The Sun's strength, \sigma
-%   2) The argument of latitude of the Moon at epoch, M_0
-%   3) The inclination of the Moon's orbit wrt the ecliptic, i
-%   4) The RAAN of the Moon's orbit, \Omega
+%   2) A change in the Earth/Moon - Sun semimajor axis, \tilde{a}_S
 %
 % Author:  Andrew Binder (2024)
 %
 % Inputs:
-%   tau = [T](1x1)<float> | The time elapsed since the simulation epoch
-%   sv = [L, L/T](6x1)<float> | (IFF stmenabled == false) The
-%       nondimensionalized position and velocity of a spacecraft flying within
-%       the model, expressed in the CR3BP-typical rotating frame.
-%   sv = [L, L/T](106x1)<float> | (IFF stmenabled == true) The
-%       nondimensionalized position and velocity of a spacecraft flying within
-%       the model, expressed in the CR3BP-typical rotating frame, with a
-%       linearly-indexed copy of the augmented state transition matrix
-%       appended to the end.
-%   sigma = [](1x1)<float> | A system configuration scalar that can
-%       tune the effects caused by the Sun's gravity acting on the
-%       model.  When sigma = 0, the model is identical to the CR3BP.
-%       When sigma = 1, the model is the BCIR4BP with the Sun acting at
-%       full-strength.  When sigma \in (0, 1), Sun effects are at
-%       partial strength.
-%   M0 = [rad](1x1)<float> | The argument of latitude of the Moon in its
-%       circular orbit about the Earth, as measured at epoch and against
-%       the Earth-Moon-Sun barycenter-centric inertial frame
-%   inc = [rad](1x1)<float> | The constant inclination of the Moon's circular
-%       orbit about the Earth, as measured against the Earth-Moon-Sun
-%       barycenter-centric inertial frame
-%   RAAN = [rad](1x1)<float> | The constant inclination of the Moon's circular
-%       orbit about the Earth, as measured against the Earth-Moon-Sun
-%       barycenter-centric inertial frame
-%   mu = [](1x1)<float> | The dimensional standard gravitational
-%       parameter (SGP) of the Moon, divided by the sum of the dimensional
-%       values of the Earth and the Moon's SGP.
-%   ae = [L](1x1)<float> | The nondimensionalized semi-major axis of the
-%       Earth's orbit about the Sun.
-%   mu_S = [L^3 / T^2](1x1)<float> | The nondimensionalized SGP of the Sun.
-%   stmenabled = [](1x1)<boolean> | A flag that instructs the function
-%       to also propagate the BCIR4BP's STM (and associated
-%       configuration partials, used in homotopies)
-%
-% Outputs:
-%   sv_dot = [L/T, L/T^2](6x1)<float> | The derivatives of each state
-%       quantity with respect to tau.
-%   sv_dot = [L/T, L/T^2](106x1)<float> | The derivatives of each state
-%       quantity with respect to tau, with the tau-derivative of the augmented
-%       STM (a matrix) linearly-indexed and appended to the end.
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-    % Allow for name-value argument definitions for code clarity
-    arguments
-        tau double
-        sv double
-        nv_args.earth_moon_massparam double
-        nv_args.earth_sma_nondim double
-        nv_args.sun_sgp_nondim double
-        nv_args.sun_effect_slider double = 1.0
-        nv_args.moon_arglat_at_epoch double = 0.0
-        nv_args.moon_inclination double = 0.898; % Moons incl. is 5.145 degrees
-        nv_args.moon_right_ascension double = 0.0
-        nv_args.stm_enabled logical = true
-    end
-
-    % Unpack name-value arguments into more usable local variables
-    mu = nv_args.earth_moon_massparam;
-    ae = nv_args.earth_sma_nondim;
-    mu_S = nv_args.sun_sgp_nondim;
-    sigma = nv_args.sun_effect_slider;
-    M0 = nv_args.moon_arglat_at_epoch;
-    inc = nv_args.moon_inclination;
-    RAAN = nv_args.moon_right_ascension;
-    stmenabled = nv_args.stm_enabled;
-
-    % Pre-allocate for both speed, and to ensure that this vector has
-    % the right shape
-    if stmenabled == false
-        sv_dot = zeros([6, 1]);
+    % Handle both state-only and state and STM propagation
+    if length(sv) == 6
+        state = sv(1:6);
     else
-        sv_dot = zeros([106, 1]);
-
-        STM = reshape(sv(7:106), [10, 10]);
+        state = sv(1:6);
+        STM = reshape(sv(7:end), [sim_config.N, sim_config.N]);
     end
 
-    % State vector unpacking
-    satellite_position = sv(1:3);
+    % Decompose quantities that come from the simulation config
+    tau_e = sim_config.tau_e;
+    mu = sim_config.mu;
+    mutil_S = sim_config.mutil_S;
+    atil_S = sim_config.atil_S;
+    sigma = sim_config.sigma;
+    B0 = sim_config.B0;
+    TH0 = sim_config.TH0;
+    INC = sim_config.INC;
 
-    % This term equals 1 - \gamma, when nondimensionalized
-    OmG = mu_S / (mu_S + 1);
+    % Construct the angles at this particular \Delta \tau
+    abs_time = delta_tau + tau_e;
 
-    % Get the Moon's AoL and the RAAN - Earth MA diff. at the current tau
-    M = M0 + tau;
-    B = RAAN - sqrt((mu_S + 1)/ae^3) * tau;
+    b_dot = sqrt((mutil_S + 1) / atil_S^3);
 
-    % Construct appropriate simple-rotation direction cosine matrices...
-    C3M = [cos(M), sin(M), 0; -sin(M), cos(M), 0; 0, 0, 1];
-    C1I = [1, 0, 0; 0, cos(inc), sin(inc); 0, -sin(inc), cos(inc)];
-    C3B = [cos(B), sin(B), 0; -sin(B), cos(B), 0; 0, 0, 1];
+    theta = mod(TH0 + abs_time, 2*pi);
+    B = mod(B0 - b_dot * abs_time, 2*pi);
+    
+    % Construct the C_{31B} direction cosine matrix
+    cT = cos(theta);  sT = sin(theta);
+    cI = cos(INC);  sI = sin(INC);
+    cB = cos(B);  sB = sin(B);
 
-    % ... and DCM partial derivatives
-    K2B = [-cos(B), -sin(B), 0; sin(B), -cos(B), 0; 0, 0, 0];
+    C3T = [cT, sT, 0; -sT, cT, 0; 0, 0, 1];
+    C1I = [1, 0, 0; 0, cI, sI; 0, -sI, cI];
+    C3B = [cB, sB, 0; -sB, cB, 0; 0, 0, 1];
 
-    % Construct compound DCMs, DCM partial derivatives
-    CB = C3M * C1I * C3B;
-    Kalfa = C3M * C1I * K2B;
+    C_31B = C3T * C1I * C3B;
 
-    % The Earth-Moon barycenter's distance to the Sun, in R_EM coords
-    eps_vec = [-ae; 0; 0];
+    % Earth -> satellite vector and unit vector
+    rho_E = state(1:3) + [mu; 0; 0];
+    rhohat_E = rho_E / norm(rho_E);
 
-    % Get spacecraft positions relative to:
-    %   1) The Sun, written in R_EM coordinates
-    %   2) The Earth, written in M_EM coordinates
-    %   3) The Moon, written in M_EM coordinates
-    DeltaS = CB' * satellite_position - eps_vec;
-    DeltaE = satellite_position - [-mu; 0; 0];
-    DeltaM = satellite_position - [1 - mu; 0; 0];
+    % Moon -> satellite vector and unit vector
+    rho_M = state(1:3) - [1 - mu; 0; 0];
+    rhohat_M = rho_M / norm(rho_M);
 
-    % Vector norms, squared
-    DeltaS2 = dot(DeltaS, DeltaS);
-    DeltaE2 = dot(DeltaE, DeltaE);
-    DeltaM2 = dot(DeltaM, DeltaM);
+    % Sun -> satellite vector and unit vector
+    rho_S = state(1:3) + C_31B * [atil_S; 0; 0];  % Hardcoded vector is \tilde{d}
+    rhohat_S = rho_S / norm(rho_S);
 
-    % Gravity forces, expressed in frames listed above
-    A_S = -mu_S * DeltaS / DeltaS2^(3 / 2);
-    A_E = -(1 - mu) * DeltaE / DeltaE2^(3 / 2);
-    A_M = -mu * DeltaM / DeltaM2^(3 / 2);
+    % Acceleration of the Earth-Moon barycenter (EMBC)
+    atil_EM = [mutil_S / atil_S^2; 0; 0];
 
-    % Kinematical contribs. from the Moon's orbit, in M_EM coordinates
-    moon_orbit_kinematic_contrib = [sv(1) + 2 * sv(5); sv(2) - 2 * sv(4); 0];
+    % Earth/Moon/Sun accelerations on the satellite wrt EMBC
+    Atil_E = -(1 - mu) * rhohat_E / norm(rho_E)^2;
+    Atil_M = -(mu) * rhohat_M / norm(rho_M)^2;
+    Atil_S = -(mutil_S) * rhohat_S / norm(rho_S)^2;
 
-    % Kinematical contribs. from the Earth's orbit, in R_EM coordinates
-    % NOTE: This term is the negative of the term from documentation,
-    %       and also divided out a common term of 'ae'
-    earth_orbit_kinematical_contrib = mu_S * (OmG / ae^2) * Kalfa * [1; 0; 0];
+    % Skew symmetric [\mathbbm{1}_3]_\times matrix from rotating frame
+    skew_13 = [0, -1, 0; 1, 0, 0; 0, 0, 0];
 
-    % Synodic acceleration, expressed in M_EM coordinates
-    xdd_MeM = sigma * (CB * A_S - earth_orbit_kinematical_contrib) ...
-            + A_E + A_M + moon_orbit_kinematic_contrib;
+    acceleration =  Atil_E ...                                          % Earth term
+                  + Atil_M ...                                          % Moon term
+                  + sigma * (Atil_S + C_31B * atil_EM) ...              % Sun-related terms
+                  - 2 * skew_13 * state(4:6) - skew_13^2 * state(1:3);  % Terms from rotating frame
 
-    % Packaging results for MATLAB
-    sv_dot(1:3) = sv(4:6);
-    sv_dot(4:6) = xdd_MeM;
+    sv_dot = [state(4:6); acceleration];
 
-    if stmenabled == true
-        Amat = zeros(10);
+    if length(sv) > 6  % If we choose to integrate an STM
+        A = zeros(7);
 
-        K3 = [-1, 0, 0; 0, -1, 0; 0, 0, 0];
-        K4 = [0, 1, 0; -1, 0, 0; 0, 0, 0];
+        A(1:3, 4:6) = eye(3);
+        A(4:6, 4:6) = -2 * skew_13;
 
-        sun_tensor = mu_S * (3 * (DeltaS * DeltaS') - DeltaS2 * eye(3));
-        earth_tensor = (1 - mu) * (3 * (DeltaE * DeltaE') - DeltaE2 * eye(3));
-        moon_tensor = mu * (3 * (DeltaM * DeltaM') - DeltaM2 * eye(3));
+        % Jacobians of Earth/Moon/Sun acceleration terms
+        dAtil_E_drho = (1 - mu) * (3 * (rhohat_E * rhohat_E') - eye(3)) / norm(rho_E)^3;
+        dAtil_M_drho = mu * (3 * (rhohat_M * rhohat_M') - eye(3)) / norm(rho_M)^3;
+        dAtil_S_drho = mutil_S * (3 * (rhohat_S * rhohat_S') - eye(3)) / norm(rho_S)^3;
 
-        % The Jacobians of each force term with respect to the s/c position
-        dAS_dpos = sigma * CB * sun_tensor * CB' * DeltaS2^(-5 / 2);
-        dAE_dpos = earth_tensor * DeltaE2^(-5 / 2);
-        dAM_dpos = moon_tensor * DeltaM2^(-5 / 2);
+        % Total partial w.r.t. spacecraft position
+        A(4:6, 1:3) = dAtil_E_drho + dAtil_M_drho + sigma * dAtil_S_drho - skew_13^2;
 
-        % Partial of dynamics with respect to parameter sigma
-        dAS_dsigma = CB * A_S - earth_orbit_kinematical_contrib;
+        % Partial derivative with respect to sigma
+        A(4:6, 7) = Atil_S + C_31B * atil_EM;
 
-        % Similarity transform of dAS_dpos
-        G = CB * dAS_dpos * CB';
+        STM_dot = A * STM;
 
-        K1M = [-sin(M), cos(M), 0; -cos(M), -sin(M), 0; 0, 0, 0];
-        K1B = [-sin(B), cos(B), 0; -cos(B), -sin(B), 0; 0, 0, 0];
-        K3B = [sin(B), -cos(B), 0; cos(B), sin(B), 0; 0, 0, 0];
-        dC1I_dI = [0, 0, 0; 0, -sin(inc), cos(inc); 0, -cos(inc), -sin(inc)];
-
-        dCB_dM0 = K1M * C1I * C3B;
-        dCB_dOm = C3M * C1I * K1B;
-        dCB_dIn = C3M * dC1I_dI * C3B;
-
-        dKalfa_dM0 = K1M * C1I * K2B;
-        dKalfa_dOm = C3M * C1I * K3B;
-        dKalfa_dIn = C3M * dC1I_dI * K2B;
-
-        % K3 and K4 matrices come from the kinematical contr. to dynamics
-        Amat(1:3, 4:6) = eye(3);
-
-        Amat(4:6, 1:3) = dAS_dpos + dAE_dpos + dAM_dpos - K3;
-        Amat(4:6, 4:6) = 2 * K4;
-        Amat(4:6, 7) = dAS_dsigma;
-
-        Amat(4:6, 8) = sigma * (dCB_dM0 * A_S ...
-                            + G * dCB_dM0' * satellite_position ...
-                            - mu_S * (OmG / ae^2) * dKalfa_dM0 * [1; 0; 0]);
-
-        Amat(4:6, 9) = sigma * (dCB_dOm * A_S ...
-                            + G * dCB_dOm' * satellite_position ...
-                            - mu_S * (OmG / ae^2) * dKalfa_dOm * [1; 0; 0]);
-
-        Amat(4:6, 10) = sigma * (dCB_dIn * A_S ...
-                            + G * dCB_dIn' * satellite_position ...
-                            - mu_S * (OmG / ae^2) * dKalfa_dIn * [1; 0; 0]);
-
-        STM_dot = Amat * STM;
-
-        sv_dot(7:106) = reshape(STM_dot, [100, 1]);
+        sv_dot = [sv_dot; reshape(STM_dot, [sim_config.N^2, 1])];
     end
 end
