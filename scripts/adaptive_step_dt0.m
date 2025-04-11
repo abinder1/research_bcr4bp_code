@@ -89,7 +89,7 @@ sim_config.TH0 = 0.0;
 % Propagate the orbit for a sigma value of zero
 ode_func = @(t, y) bcir4bp_stm(t, y, sim_config);
 
-dv_size = 25 / (1000 * v_star);  % Perturbation delta-vee size
+dv_size = 50 / (1000 * v_star);  % Perturbation delta-vee size
 prop_time = -40;
 
 REMIN = 6378 / l_star;
@@ -105,17 +105,16 @@ surf(X_sphere * RMMIN + 1 - mu, Y_sphere * RMMIN, Z_sphere * RMMIN, ...
 crash_event = @(t, y) perigee_function(t, y, mu, 1.01 * REMIN, 1.01 * RMMIN, RMAX);
 opts_crash = odeset("RelTol", 1e-9, "AbsTol", 1e-9, "Events", crash_event);
 
-M_max = 300;
+M_max = 10000;
 
 oo_time = 0;  % Choose an initial value for the on-orbit time
 
-d_oo_min = 1e-10;
-d_oo_max = 0.1;
+d_oo_min = 1e-7;
+d_oo_max = 1e-2;
 
 d_oo_time = d_oo_min;
 
-dxf_target_min = 0.05;
-dxf_target_max = 0.2;
+dxf_target = 0.05;
 
 break_flag = false;
 final_position_storage = zeros([3, M_max]);
@@ -126,16 +125,12 @@ earth_close_approach_struct(12 * M_max).final_oo_state = 0;
 earth_close_approach_struct(12 * M_max).final_oo_time = 0;
 earth_close_approach_struct(12 * M_max).dv_size = dv_size;
 earth_close_approach_struct(12 * M_max).pass_distance = 0;
-
-moon_close_approach_struct = earth_close_approach_struct;
+earth_close_approach_struct(12 * M_max).M = 0;
 
 QE = 1;
 QM = 1;
 
 for M = 1:1:M_max
-    min_moon_pass = 1;
-    min_earth_pass = 1;
-
     fprintf("M = %d | On-Orbit Time = %.3f / %.3f | doo = %.2e\n", M, oo_time, orbit.TIP, d_oo_time)
 
     [IC_pure, dx0_dt0] = estimate_initial_state_change(oo_time, spo_ss, dv_size);
@@ -146,77 +141,69 @@ for M = 1:1:M_max
     
     perturbed_sol_struct = ode89(ode_func, [0, prop_time], [IC_burn; reshape(eye(6), [36, 1])], opts_crash);
     
-    % Pull any events that happened
-    earth_perigee_events = find(perturbed_sol_struct.ie == 4);
+    max_dxf_norm_dt0 = 0;
+    sensitive_states = zeros([6, 3]);
 
-    for k = 1:1:length(earth_perigee_events)
-        pass_distance = norm(perturbed_sol_struct.ye(1:3, earth_perigee_events(k)) + [mu; 0; 0]);
+    while and(perturbed_sol_struct.ie(end) > 3, abs(perturbed_sol_struct.x(end)) < abs(prop_time))
+        if perturbed_sol_struct.ie(end) == 4
+            pass_distance = norm(perturbed_sol_struct.ye(1:3, end) + [mu; 0; 0]);
 
-        min_earth_pass = min(min_earth_pass, pass_distance);
-
-        if pass_distance < 0.1
-            earth_close_approach_struct(QE).final_oo_state = IC_pure;
-            earth_close_approach_struct(QE).final_oo_time = oo_time;
-            earth_close_approach_struct(QE).dv_size = dv_size;
-    
-            earth_close_approach_struct(QE).pass_states = perturbed_sol_struct.ye(1:6, earth_perigee_events(k));
-            earth_close_approach_struct(QE).return_TOF = -perturbed_sol_struct.xe(earth_perigee_events(k));
-            earth_close_approach_struct(QE).pass_distance = pass_distance;
-    
-            QE = QE + 1;
-        end
-    end
-
-    moon_perigee_events = find(perturbed_sol_struct.ie == 5);
-
-    for k = 1:1:length(moon_perigee_events)
-        pass_distance = norm(perturbed_sol_struct.ye(1:3, moon_perigee_events(k)) - [1 - mu; 0; 0]);
-
-        min_moon_pass = min(min_moon_pass, pass_distance);
-
-        if pass_distance < 0.1
-            moon_close_approach_struct(QM).final_oo_state = IC_pure;
-            moon_close_approach_struct(QM).final_oo_time = oo_time;
-            moon_close_approach_struct(QM).dv_size = dv_size;
+            if pass_distance < 0.5
+                earth_close_approach_struct(QE).final_oo_state = IC_pure;
+                earth_close_approach_struct(QE).final_oo_time = oo_time;
+                earth_close_approach_struct(QE).dv_size = dv_size;
         
-            moon_close_approach_struct(QM).pass_states = perturbed_sol_struct.ye(1:6, moon_perigee_events(k));
-            moon_close_approach_struct(QM).return_TOF = -perturbed_sol_struct.xe(moon_perigee_events(k));
-            moon_close_approach_struct(QM).pass_distance = pass_distance;
-    
-            QM = QM + 1;
+                earth_close_approach_struct(QE).pass_states = perturbed_sol_struct.ye(1:6, end);
+                earth_close_approach_struct(QE).return_TOF = -perturbed_sol_struct.xe(end);
+                earth_close_approach_struct(QE).pass_distance = pass_distance;
+
+                earth_close_approach_struct(QE).M = M;
+        
+                QE = QE + 1;
+            end
         end
+
+        dxf_norm_dt0 = norm(reshape(perturbed_sol_struct.y(7:42, end), [6 6]) * dx0_dt0);
+        
+        if max_dxf_norm_dt0 < dxf_norm_dt0
+            max_dxf_norm_dt0 = dxf_norm_dt0;
+
+            sensitive_states = circshift(sensitive_states, 1, 2);
+
+            sensitive_states(:, 1) = perturbed_sol_struct.y(1:6, end);
+        end
+
+        perturbed_sol_struct = odextend(perturbed_sol_struct, [], prop_time);
+    end
+    
+    dxf_norm_dt0 = norm(reshape(perturbed_sol_struct.y(7:42, end), [6 6]) * dx0_dt0);
+
+    final_earth_distance = norm(perturbed_sol_struct.ye(1:3, end) + [mu; 0; 0]);
+    final_moon_distance = norm(perturbed_sol_struct.ye(1:3, end) - [1 - mu; 0; 0]);
+
+    closest_primary = min([final_earth_distance, final_moon_distance]);
+    
+    if and(max_dxf_norm_dt0 < dxf_norm_dt0, closest_primary < 0.05)
+        max_dxf_norm_dt0 = dxf_norm_dt0;
+        
+        sensitive_states = circshift(sensitive_states, 1, 2);
+
+        sensitive_states(:, 1) = perturbed_sol_struct.y(1:6, end);
     end
 
-    % Pull some quantities for the adaptive stepsize scheme
-    final_state = perturbed_sol_struct.y(1:6, end);
-    final_time = perturbed_sol_struct.x(end);
-
-    earth_distance = min(norm(final_state(1:3) + [mu; 0; 0]), min_earth_pass);
-    moon_distance = min(norm(final_state(1:3) - [1 - mu; 0; 0]), min_moon_pass);
-
-    dxf_target = min([earth_distance; moon_distance]) / 10;
-    dxf_target = max(min(dxf_target, dxf_target_max), dxf_target_min);
-
-    final_position_storage(:, M) = final_state(1:3);
-
-    STMF = reshape(perturbed_sol_struct.y(7:42, end), [6 6]);
-    dxf_norm_dt0 = norm(STMF * dx0_dt0);
+    final_position_storage(:, M) = perturbed_sol_struct.y(1:3, end);
     
     if M > 1
-        adapt_metric = (0.9 * norm(final_state - last_final_state) + 0.1 * dxf_norm_dt0 * d_oo_time) / dxf_target;
+        sensitive_state_norms = vecnorm(sensitive_states - last_sensitive_states, 2);
 
-        adapt_factor = max(min(max(adapt_metric), 10), 0.8);
+        adapt_metric = (0.8 * max(sensitive_state_norms) + 0.2 * max_dxf_norm_dt0 * d_oo_time) / dxf_target;
+
+        adapt_factor = min(max(adapt_metric, 1/2), 10);
         
         d_oo_time = d_oo_time / adapt_factor;
-
-        % This senses a large change in propagation time, i.e. a new crash
-        % or escaping from crashes
-        prop_time_condition = abs(final_time / last_final_time - 1);
-
-        if prop_time_condition > 0.05 % We've just gotten past a crash event
-            d_oo_time = d_oo_min;
-        end
     end
+
+    d_oo_time = max(min(d_oo_time, d_oo_max), d_oo_min);
 
     if break_flag == true
         break
@@ -228,18 +215,14 @@ for M = 1:1:M_max
         break_flag = true;
     end
 
-    d_oo_time = max(min(d_oo_time, d_oo_max), d_oo_min);
-
     % Set up for the next loop
     oo_time = oo_time + d_oo_time;
 
-    last_final_state = final_state;
-    last_final_time = final_time;
+    last_sensitive_states = sensitive_states;
 end
 
 final_position_storage(:, M+1:end) = [];
 earth_close_approach_struct(QE:end) = [];
-moon_close_approach_struct(QM:end) = [];
 
 scatter3(final_position_storage(1, :), final_position_storage(2, :), final_position_storage(3, :), 'k.')
 
@@ -276,7 +259,7 @@ function [f, terminal, direction] = perigee_function(~, y, mu, REMIN, RMMIN, RMA
          earth_pass; ...
          moon_pass];
 
-    terminal = [1; 1; 1; 0; 0];
+    terminal = [1; 1; 1; 1; 1];
 
-    direction = [-1; -1; 1; -1; -1];
+    direction = [];
 end
