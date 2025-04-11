@@ -94,7 +94,7 @@ prop_time = -40;
 
 REMIN = 6378 / l_star;
 RMMIN = 1738 / l_star;
-RMAX = 5;
+RMAX = 3;
 
 surf(X_sphere * REMIN - mu, Y_sphere * REMIN, Z_sphere * REMIN, ...
      'EdgeColor', '#0047AB', 'FaceColor', '#6495ED');
@@ -109,7 +109,7 @@ M_max = 10000;
 
 oo_time = 0;  % Choose an initial value for the on-orbit time
 
-d_oo_min = 1e-7;
+d_oo_min = 1e-6;
 d_oo_max = 1e-2;
 
 d_oo_time = d_oo_min;
@@ -183,7 +183,7 @@ for M = 1:1:M_max
 
     closest_primary = min([final_earth_distance, final_moon_distance]);
     
-    if and(max_dxf_norm_dt0 < dxf_norm_dt0, closest_primary < 0.05)
+    if and(max_dxf_norm_dt0 < dxf_norm_dt0, closest_primary < 0.1)
         max_dxf_norm_dt0 = dxf_norm_dt0;
         
         sensitive_states = circshift(sensitive_states, 1, 2);
