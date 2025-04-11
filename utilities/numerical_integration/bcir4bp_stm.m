@@ -13,11 +13,11 @@ function sv_dot = bcir4bp_stm(delta_tau, sv, sim_config)
 % Inputs:
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
     % Handle both state-only and state and STM propagation
-    if length(sv) == 6
+    if sim_config.simulate_STM == false
         state = sv(1:6);
-    else
+    elseif sim_config.simulate_STM == true
         state = sv(1:6);
-        STM = reshape(sv(7:end), [sim_config.N, sim_config.N]);
+        STM = reshape(sv(7:end), [6, 6]);
     end
 
     % Decompose quantities that come from the simulation config
@@ -79,8 +79,8 @@ function sv_dot = bcir4bp_stm(delta_tau, sv, sim_config)
 
     sv_dot = [state(4:6); acceleration];
 
-    if length(sv) > 6  % If we choose to integrate an STM
-        A = zeros(7);
+    if sim_config.simulate_STM == true  % If we choose to integrate an STM
+        A = zeros(6);
 
         A(1:3, 4:6) = eye(3);
         A(4:6, 4:6) = -2 * skew_13;
@@ -93,11 +93,6 @@ function sv_dot = bcir4bp_stm(delta_tau, sv, sim_config)
         % Total partial w.r.t. spacecraft position
         A(4:6, 1:3) = dAtil_E_drho + dAtil_M_drho + sigma * dAtil_S_drho - skew_13^2;
 
-        % Partial derivative with respect to sigma
-        A(4:6, 7) = Atil_S + C_31B * atil_EM;
-
-        STM_dot = A * STM;
-
-        sv_dot = [sv_dot; reshape(STM_dot, [sim_config.N^2, 1])];
+        sv_dot = [sv_dot; reshape(A * STM, [36, 1])];
     end
 end
